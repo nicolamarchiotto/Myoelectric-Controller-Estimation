@@ -1,4 +1,4 @@
-# RPC_module_A Project
+# RPC Project
 This repo contains the code for the controller estimation of a study regarding 
 Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
 
@@ -6,36 +6,38 @@ The entry point of the project is the project_myo,m file.
 
 In this file the following actions are performed:
 
-* Data import from the logs files
+1) Data import from the logs files
 
-* Selection and filtering for choosing the data of the decode and control architecture used in the experiments
-    The cases should be the following
- 
-    CTRLArchitecture    Decoder     
+2) Data filtering: Chose data of the experiments with a certain decoder and corresponding to a certain control architecture
+
+* The cases should be the following
+```
+CTRLArchitecture    Decoder     
     
-    COMP                NONE (MULTI8)
-    FORCE_INT           MULTI2/MULTI8
-    IMPEDANCE           MULTI2/MULTI8
-    VELOCITY/POS        MULTI2/MULTI8
+COMP                NONE (MULTI8)
+FORCE_INT           MULTI2/MULTI8
+IMPEDANCE           MULTI2/MULTI8
+VELOCITY/POS        MULTI2/MULTI8
 
-    Ask Davide, the informations about CTRLArchitecture and Decoder are not right
+Ask Davide, the informations about CTRLArchitecture and Decoder are not right
+```
+* For Each of the follwing models
+```
+C                   M = C*G
 
-# For Each of the follwing architecures
-    C                   M = C*G
-    1 poles             3 poles
-    1 zeros, 1 poles    1 zeros, 3 poles
-    1 zeros, 2 poles    1 zeros, 4 poles
-    2 zeros, 2 poles    2 zeros, 4 poles 
-    
-    - Identification of the  brain controller C and overall plant C*G
-        Chose randomly 80% of  the experiments, and for each estimate the plant and controller using the single experiment data
-    - Use the remaining 20% of the experiments to validate the estimated controllers and plants and choose the best one
-    - Save the best controller and plant for the given architecture
+1 poles             3 poles
+1 zeros, 1 poles    1 zeros, 3 poles
+1 zeros, 2 poles    1 zeros, 4 poles
+2 zeros, 2 poles    2 zeros, 4 poles 
+```   
+* Identification of the  brain controller C and overall plant C*G, chose randomly 80% of  the experiments, and for each estimate the plant and controller using the single experiment data
+* Use the remaining 20% of the experiments to validate the estimated controllers and plants and choose the best one
+* Save the best controller and plant for the given architecture
 
-# Use the best model for each architectures and use all the data to validate them, the ones which give the best score will be
+3) Use the best model for each architectures and use all the data to validate them, the ones which give the best score will be
 the best controller and plant for the given pair CTRLArchitecture/Decoder, C_best and P_best
 
-* Test C_best and P_best on simulink architectures
+4) Test C_best and P_best on simulink architectures
 
 Link to external resources: 
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
