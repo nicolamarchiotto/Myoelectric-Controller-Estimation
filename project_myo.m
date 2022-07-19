@@ -38,86 +38,104 @@ selected_indexes = find(selection)';
 % model C*G
 
 Ts = 0.01;
-allData = {};
-allSys = {};
-allRef = {};
-allPos = {};
-allContData = {};
-allContSys = {};
-allSignal = {};
+
+allTrimmedPosRef = {};
+allTrimmedPos = {};
+
+allTrimmedTorque = {};
+allTrimmedPosError = {};
+
+
+all_W_iddata = {};
+all_W_est = {};
+
+all_C_iddata = {};
+all_C_est = {};
+
 i = 0;
 
 maxSignalLength = 140;
 
-for testIdx=selected_indexes  %for each arm motion (Forward or Backward) estimate the controller
+for testIdx=selected_indexes  %for each arm motion = 1 experiment, estimate controller and model
     i = i + 1;
     tagIdx = fixedDataTableExpanded(testIdx,:).tag_idx;
-    target = fixedDataTableExpanded(testIdx,:).target_angle;
-    test_position_v = exoRefSplineCells{tagIdx}.thetaE(fixedDataTableExpanded(testIdx,:).start_idx:fixedDataTableExpanded(testIdx,:).end_idx);
+    %reference value
+    referencePosVal = fixedDataTableExpanded(testIdx,:).target_angle;
+    %vector of positions of the experiment
+    position = exoRefSplineCells{tagIdx}.thetaE(fixedDataTableExpanded(testIdx,:).start_idx:fixedDataTableExpanded(testIdx,:).end_idx);
     
-    % Reference voltage
-    signal = exoRefSplineCells{tagIdx}.reference(fixedDataTableExpanded(testIdx,:).start_idx:fixedDataTableExpanded(testIdx,:).end_idx);
+    % Reference torque
+    torque = exoRefSplineCells{tagIdx}.reference(fixedDataTableExpanded(testIdx,:).start_idx:fixedDataTableExpanded(testIdx,:).end_idx);
     
     impIdx = 1;
 
     % Data cleaning, remove data of test before actual motion
-    while (abs(test_position_v(1) - test_position_v(impIdx+1))<0.005) 
-        %idea: cut everything until we drop the value over 0.01, i.e. the
-        %movement has begun
+    % idea: cut everything until we drop the value over 0.01, i.e. the movement has begun
+    while (abs(position(1) - position(impIdx+1))<0.005)   
        impIdx = impIdx + 1; 
     end
-    cutPos = test_position_v(impIdx:impIdx+maxSignalLength);
+    
+    trimmedPos = position(impIdx:impIdx+maxSignalLength);
     
     % Vector of reference values
-    ref = ones(length(cutPos),1)*target;
-    allPos{i} = cutPos;
-    allRef{i} = ref;
+    trimmedRefPos = ones(length(trimmedPos),1)*referencePosVal;
 
-    % Vector of error
-    err = ref-cutPos;
+    % Vector of position error
+    trimmedPosErr = trimmedRefPos-trimmedPos;
     
     % Reference signal cut to correspond with cutPos length
-    cutSignal = signal(impIdx:impIdx+maxSignalLength);
+    trimmedTorque = torque(impIdx:impIdx+maxSignalLength);
 
-    % Structure needed by System Id Toolbox iddata, output=cutSignal,
-    % input=err, brain controller estimation 
-    cont_data = iddata(cutSignal, err, Ts); 
-
-    %CONTROLLER ESTIMATION C
-    cont_sys = tfest(cont_data,1,1); %1 pole(high freq hopefully), 1 zero
+    % Structure needed by System Id Toolbox iddata(y,u,Ts)
+    % For model estimation, tfest(iddata, num_poles, num_zeros)
     
-    % Save estimated controller for the single test
-    allContData{i} = cont_data;
-    allContSys{i} = cont_sys;
-    allSignal{i} = cutSignal;
+    % CONTROLLER ESTIMATION C
+    C_iddata = iddata(trimmedTorque, trimmedPosErr, Ts); 
+    C_est = tfest(C_iddata,1,1); %1 pole(high freq hopefully), 1 zero
     
-    %MODEL ESTIMATION C*G
-    full_data = iddata(cutPos, ref, Ts);
-    full_sys = tfest(full_data, 3, 1);
+    % Save estimated controller
+    all_C_iddata{i} = C_iddata;
+    all_C_est{i} = C_est;
+    allTrimmedTorque{i} = trimmedTorque;
+    allTrimmedPosError{i} = trimmedPosErr;
     
-    % Save estimated model for the single test
-    allData{i} = full_data;
-    allSys{i} = full_sys;
+    % MODEL ESTIMATION W = CG/1-CG
+    
+    W_iddata = iddata(trimmedPos, trimmedRefPos, Ts);
+    W_est = tfest(W_iddata, 3, 1);
+    
+    % Save estimated model
+    all_W_iddata{i} = W_iddata;
+    all_W_est{i} = W_est;
+    allTrimmedPos{i} = trimmedPos;
+    allTrimmedPosRef{i} = trimmedRefPos;
 end
 
-%% PLOT: see signals with removed delay, plotted pos of imported data
+%% PLOT: pose with removed delay
 figure;
 hold on;
-for i = 1:length(allPos)
-    plot(allPos{i});
+for i = 1:length(allTrimmedPos)
+    plot(allTrimmedPos{i});
 end
+%% PLOT: torque with removed delay
+figure;
+hold on;
+for i = 1:length(all_C_y)
+    plot(all_C_y{i});
+end
+
 %% TESTING: Search best estimatred model C*G, carefull O(n^2)
 bestModel = 1;
 bestModelFit = 0;
 outliers = [];
-for i = 1:length(allSys)
+for i = 1:length(all_W_est)
     % Compare the estimated model output of the single test with the real output from data
     modelFit = 0;
-    for j = 1:length(allData)    
-        [y,fit] = compare(allData{j}, allSys{i}); 
+    for j = 1:length(all_W_iddata)    
+        [y,fit] = compare(all_W_iddata{j}, all_W_est{i}); 
         modelFit = modelFit + fit;
     end
-    modelFit = modelFit/length(allData);
+    modelFit = modelFit/length(all_W_iddata);
     if modelFit > bestModelFit
         bestModelFit = modelFit;
         bestModel = i;
@@ -130,16 +148,16 @@ end
 fprintf('\nBest model %d with %.2f mean fit\n', bestModel, bestModelFit);
 %legend
 
-pos = allPos{bestModel};
+pos = allTrimmedPos{bestModel};
 figure;
 plot(0:length(pos)-1, pos);
 figure;
-[y,fit] = compare(allData{bestModel}, allSys{bestModel});
+[y,fit] = compare(all_W_iddata{bestModel}, all_W_est{bestModel});
 y1 = cell2mat(get(y).OutputData);
 plot(0:length(y1)-1,y1);
 
 %% search best controller
-[bestCont, bestContFit] = bestModelFinder(allContSys, allContData);
+[bestCont, bestContFit] = bestModelFinder(all_C_est, all_C_iddata);
 
 %% PLOT: See best model on all positions
 figure(10);
@@ -147,15 +165,15 @@ subplot(1,2,1);
 title('Real position');
 subplot(1,2,2);
 title('Estimated position');
-for i=1:length(allData)
+for i=1:length(all_W_iddata)
     if ismember(i, outliers)
         continue;
     end
-    pos = allPos{i};
+    pos = allTrimmedPos{i};
     subplot(1,2,1);
     hold on;
     plot(0:length(pos)-1, pos);
-    [y,fit] = compare(allData{i}, allSys{bestModel});
+    [y,fit] = compare(all_W_iddata{i}, all_W_est{bestModel});
     y1 = cell2mat(get(y).OutputData);
     subplot(1,2,2);
     hold on;
@@ -168,12 +186,12 @@ subplot(1,2,1);
 title('Real torque');
 subplot(1,2,2);
 title('Estimated torque');
-for i=1:length(allContData)
-    signal = allSignal{i};
+for i=1:length(all_C_iddata)
+    torque = all_C_y{i};
     subplot(1,2,1);
     hold on;
-    plot(0:length(signal)-1, signal);
-    [y,fit] = compare(allContData{i}, allContSys{bestCont});
+    plot(0:length(torque)-1, torque);
+    [y,fit] = compare(all_C_iddata{i}, all_C_est{bestCont});
     y1 = cell2mat(get(y).OutputData);
     subplot(1,2,2);
     hold on;
@@ -192,20 +210,20 @@ j = 1;
 figure(111);
 hold on;
 title('Myo signals that end in 0');
-for i=1:length(allSignal)
+for i=1:length(all_C_y)
     %almost end in zero
-    if abs(allSignal{i}(end))>0.002
+    if abs(all_C_y{i}(end))>0.002
         continue;
     end
-    newSignals{j} = allSignal{i};
+    newSignals{j} = all_C_y{i};
     plot(newSignals{j});
-    realPos = allPos{i};
-    err = ref-realPos;
-    cont_data = iddata(newSignals, err, Ts);%for controller estimation
-    sys11{j} = tfest(cont_data,1,1);
-    sys21{j} = tfest(cont_data,2,1);
-    sys22{j} = tfest(cont_data,2,2);
-    newSigData{j} = cont_data;
+    realPos = allTrimmedPos{i};
+    trimmedPosErr = trimmedRefPos-realPos;
+    C_iddata = iddata(newSignals, trimmedPosErr, Ts);%for controller estimation
+    sys11{j} = tfest(C_iddata,1,1);
+    sys21{j} = tfest(C_iddata,2,1);
+    sys22{j} = tfest(C_iddata,2,2);
+    newSigData{j} = C_iddata;
     j = j+1;
 end
 
