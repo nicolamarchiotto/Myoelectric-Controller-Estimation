@@ -4,12 +4,12 @@ function [bestModel, bestModelFit, bestModelOutput] = bestModelFinder(models,dat
     for i = 1:length(models)
         %for each estimated model
         contFit = 0;
-        modelOutput=[];
+        modelOutput={};
         for j = 1:length(data)        
             [y,fit] = compare(data{j}, models{i});
             contFit = contFit + fit;
             y1 = cell2mat(get(y).OutputData);
-            modelOutput=[modelOutput; y1];
+            modelOutput{j}=y1;
         end
         contFit = contFit/length(data);
         if contFit > bestModelFit

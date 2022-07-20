@@ -120,8 +120,8 @@ end
 %% PLOT: torque with removed delay
 figure;
 hold on;
-for i = 1:length(all_C_y)
-    plot(all_C_y{i});
+for i = 1:length(allTrimmedTorque)
+    plot(allTrimmedTorque{i});
 end
 
 %% TESTING: Search best estimatred model C*G, carefull O(n^2)
@@ -186,12 +186,12 @@ subplot(1,2,1);
 title('Real torque');
 subplot(1,2,2);
 title('Estimated torque');
-for i=1:length(all_C_iddata)
+for i=1:length(allTrimmedTorque)
     torque = all_C_y{i};
     subplot(1,2,1);
     hold on;
     plot(0:length(torque)-1, torque);
-    [y,fit] = compare(all_C_iddata{i}, all_C_est{bestCont});
+    [y,fit] = compare(allTrimmedTorque{i}, all_C_est{bestCont});
     y1 = cell2mat(get(y).OutputData);
     subplot(1,2,2);
     hold on;
@@ -210,12 +210,12 @@ j = 1;
 figure(111);
 hold on;
 title('Myo signals that end in 0');
-for i=1:length(all_C_y)
+for i=1:length(allTrimmedTorque)
     %almost end in zero
-    if abs(all_C_y{i}(end))>0.002
+    if abs(allTrimmedTorque{i}(end))>0.002
         continue;
     end
-    newSignals{j} = all_C_y{i};
+    newSignals{j} = allTrimmedTorque{i};
     plot(newSignals{j});
     realPos = allTrimmedPos{i};
     trimmedPosErr = trimmedRefPos-realPos;
