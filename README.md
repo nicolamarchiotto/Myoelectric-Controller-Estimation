@@ -6,38 +6,53 @@ The entry point of the project is the project_myo,m file.
 
 In this file the following actions are performed:
 
-1) Data import from the logs files
+1) Data import from the logs files, 
+Chose data of the experiments acquired using a certain control architecture and decoder
+Controller estimations from single and multiples log files were tried
 
-2) Data filtering: Chose data of the experiments with a certain decoder and corresponding to a certain control architecture
-
-* The cases should be the following
-```
-CTRLArchitecture    Decoder     
-    
+* List of control architecture used for data collection
+```    
 COMP                NONE (MULTI8)
+FORCE
 FORCE_INT           MULTI2/MULTI8
+ADMITTANCE
 IMPEDANCE           MULTI2/MULTI8
 VELOCITY/POS        MULTI2/MULTI8
+```
 
-Ask Davide, the informations about CTRLArchitecture and Decoder are not right
+* List of control architecture used for data collection
 ```
-* For Each of the follwing models
+NONE (MULTI8)
+MULTI8
+PLAIN (with different gains)
 ```
-C                   M = C*G
+
+2) Data Cleaning: temporally align position and torque signals to have only the actual motion considered, remove outliers by get rod of experiments which outliers do not end up in zero +- a given theshold
+
+3) Controller estimation techniques tried:
+* Estimate the controller using a single experiment
+* Estimate the controller concatenating the experiment of the forward motions
+* Estimate the controller using the concatenation method but flip one experiment every two to partially remove discontinuities
+* Estimated the whole model W and then extract the controller exploting algebraic operations
+
+* Assumed models for the estimation
+```
+C                   W = CG/(1+CG)
 
 1 poles             3 poles
 1 zeros, 1 poles    1 zeros, 3 poles
 1 zeros, 2 poles    1 zeros, 4 poles
 2 zeros, 2 poles    2 zeros, 4 poles 
+
+G assumed to be of the following form 1/(Js^2+ds)
 ```   
-* Identification of the  brain controller C and overall plant C*G, chose randomly 80% of  the experiments, and for each estimate the plant and controller using the single experiment data
-* Use the remaining 20% of the experiments to validate the estimated controllers and plants and choose the best one
-* Save the best controller and plant for the given architecture
 
-3) Use the best model for each architectures and use all the data to validate them, the ones which give the best score will be
-the best controller and plant for the given pair CTRLArchitecture/Decoder, C_best and P_best
+* From the cleaned data, 80% of the experiments was used for the estimation, 20% for the testing
+* Save the best controller C_best
+ 
+3) Test the C_best estimated with the data corresponding to the pairs Architecture/Decoder with the Architectures listed at point 1 and save the step responses
 
-4) Test C_best and P_best on simulink architectures
+4) The goal of the procedure is to try to estimate a controller which adapts well to all given architectures
 
 Link to external resources: 
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781

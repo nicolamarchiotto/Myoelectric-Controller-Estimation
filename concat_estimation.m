@@ -101,7 +101,7 @@ torqueEpsilon=0.2;
 maxSignalLength = 140;
 
 C_plot_signals=true;
-W_plot_signals=true;
+W_plot_signals=false;
 
 % variable which if set to true enables method 3
 flip_1_every_2=false;
@@ -494,5 +494,3 @@ C_BM_Single = zpk(C_bestModelSingle)
 C_80 = invC(G, W_bestModel80);
 newC_80 = zpk(minreal(C_80,0.5))
 C_BM_80 = zpk(C_bestModel80)
-
-%%
