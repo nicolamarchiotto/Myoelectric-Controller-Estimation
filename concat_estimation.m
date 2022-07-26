@@ -273,7 +273,7 @@ clear i idx;
 
 i=1;
 
-% For method 3 set flip_1_every_2 to true in IMPORTANT PARAMETERS paragraph
+%% For method 3 set flip_1_every_2 to true in IMPORTANT PARAMETERS paragraph
 for idx = 1:1:length(deprecatedTrimmedPosError)
    if(isempty(deprecatedTrimmedPosError{idx}))
        continue;
