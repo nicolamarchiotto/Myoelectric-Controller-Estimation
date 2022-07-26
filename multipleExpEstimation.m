@@ -209,13 +209,26 @@ clear expIdx;
 
 [C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
 
-[W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
+% [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
 % RESULTS
 clc 
 fprintf('\nC: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
 
-fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
+% fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
+
+%% Simulink
+save bestController.mat C_bestModel
+load bestController.mat
+s = tf('s');
+j = 0.068;
+d = 0.01; %da 0.1 a 0.001
+beta_pos = 4;
+beta_force = 3;
+beta_force_int = 4;
+Kp = 140;
+Kd = 2;
+Ki = 0;
 
 %% PLOTS
 
