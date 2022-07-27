@@ -68,7 +68,7 @@ Script were main work for estimation was performed, actions performed in this sc
 
 * The best Controller and the controller extracted from W were tested on the simulink architectures
 
-Link to external resources: 
+# External resources and important guidelines
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
 
 N.B. This repository is not working by itself but it requires the myo_tools_testing
