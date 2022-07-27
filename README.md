@@ -1,6 +1,8 @@
 # RPC Project
 This repo contains the code for the controller estimation of a study regarding 
 Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
+ 
+**THE GOAL OF THE PROJECT IS TRY TO ESTIMATE A GENERAL CONTROLLER WHICH ADAPTS WELL TO ALL CONTROL ARCHITECTURES USED IN THE STUDY**
 
 In all the scripts of this repo the following action are performed
 
@@ -27,7 +29,8 @@ PLAIN (with different gains)
 
 2) Data Cleaning: temporally align position and torque signals to have only the actual motion considered, remove outliers by get rod of experiments which outliers do not end up in zero +- a given theshold
 
-3) In the concat_estimation.m, the following techniques were tried:
+# concat_estimation.m
+The script compares different estimation methods, actions performed in this script
 
 * Estimate the controller using a single experiment
 * Estimate the controller concatenating the experiment of the forward motions
@@ -48,23 +51,22 @@ G assumed to be of the following form 1/(Js^2+ds)
 
 * From the cleaned data, 80% of the experiments was used for the estimation, 20% for the testing
 * Save the best controller C_best
- 
-The script compared the different estimation methods, the estimation from the single experiment was choosen to advance with the study
 
-4) In the multipleExpEstimation.m, the following techniques were tried:
+The estimation from the single experiment was choosen to advance in the project
 
-The experiments were extracted from logs_eval_gains_2019_10_09_10_18__2020_06_26_30, session containing multiple sessions of experiments
+# multipleExpEstimation.m
+Script were main work for estimation was performed, actions performed in this script
 
-The controller C and whole model W were estimated using the single experiment technique explained in point 3)
-The data were cleaned in the same way explained at point 2)
+* The experiments were extracted from logs_eval_gains_2019_10_09_10_18__2020_06_26_30, session containing multiple sessions of experiments
 
-The best controller and whole model W were chosen testing on all the experiment set
+* The controller C and whole model W were estimated using the single experiment technique explained in point 3)
+* The data were cleaned in the same way explained at point 2)
 
-From the best model W, the controller was extracted using algebraic operations
+* The best controller and whole model W were chosen testing on all the experiment set
 
-The best Controller and the controller extracted from W were tested on the simulink architectures
- 
-5) The goal of the study is try to estimate a controller which adapts well to all the architectures
+* From the best model W, the controller was extracted using algebraic operations
+
+* The best Controller and the controller extracted from W were tested on the simulink architectures
 
 Link to external resources: 
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
