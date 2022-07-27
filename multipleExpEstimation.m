@@ -170,8 +170,8 @@ clear expId i;
 clc;
 
 % Number of poles and zeros for the controller
-C_num_zeros = 2;
-C_num_poles = 2;
+C_num_zeros = 1;
+C_num_poles = 1;
 
 W_num_zeros = C_num_zeros;
 W_num_poles = C_num_poles + 2;
@@ -187,7 +187,7 @@ end
 
 clear testIdx;
 
-% Estimation using single experiments
+% For each esperiment estimate C and W, 2*O(n)
 
 C_sys_est={};
 W_sys_est={};
@@ -200,7 +200,7 @@ for expIdx=1:1:length(allTrimmedRefPos)
 end
 
 clear expIdx;
-
+%% Find the best C testing on all experiments, O(n^2)
 %
 %
 % CAREFULL, each bestModelFinder is O(n^2)
@@ -209,15 +209,21 @@ clear expIdx;
 
 [C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
 
-% [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
+%% Find the best W testing on all experiments, O(n^2)
+%
+%
+% CAREFULL, each bestModelFinder is O(n^2)
+%
+%
+[W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
-% RESULTS
+%% RESULTS
 clc 
 fprintf('\nC: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
 
-% fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
+fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
 
-%% Simulink
+%% Simulink, estimated controller from position error and torque
 save bestController.mat C_bestModel
 load bestController.mat
 s = tf('s');
@@ -229,6 +235,20 @@ beta_force_int = 4;
 Kp = 140;
 Kd = 2;
 Ki = 0;
+
+% Simulink, extract controller from estimated W
+s = tf('s');
+j = 0.068;
+d = 0.01;
+G = 1/(j*s^2 + d*s);
+
+C_single = getC_from_G_and_W(G, W_bestModel);
+C_from_Wbest = zpk(minreal(C_single,0.5));
+C_BM_Single = zpk(C_bestModel);
+
+%% ASSIGN THE CONTROLLER FOR SIMULINK
+%
+Controller=C_from_Wbest;
 
 %% PLOTS
 

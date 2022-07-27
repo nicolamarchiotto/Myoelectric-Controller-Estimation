@@ -2,9 +2,7 @@
 This repo contains the code for the controller estimation of a study regarding 
 Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
 
-The entry point of the project is the project_myo,m file.
-
-In this file the following actions are performed:
+In all the scripts of this repo the following action are performed
 
 1) Data import from the logs files, 
 Chose data of the experiments acquired using a certain control architecture and decoder
@@ -12,12 +10,12 @@ Controller estimations from single and multiples log files were tried
 
 * List of control architecture used for data collection
 ```    
-COMP                NONE (MULTI8)
+COMP               
 FORCE
-FORCE_INT           MULTI2/MULTI8
-ADMITTANCE
-IMPEDANCE           MULTI2/MULTI8
-VELOCITY/POS        MULTI2/MULTI8
+FORCE_INT           
+ADM
+FIX_IMP
+POS_V           
 ```
 
 * List of control architecture used for data collection
@@ -29,7 +27,8 @@ PLAIN (with different gains)
 
 2) Data Cleaning: temporally align position and torque signals to have only the actual motion considered, remove outliers by get rod of experiments which outliers do not end up in zero +- a given theshold
 
-3) Controller estimation techniques tried:
+3) In the concat_estimation.m, the following techniques were tried:
+
 * Estimate the controller using a single experiment
 * Estimate the controller concatenating the experiment of the forward motions
 * Estimate the controller using the concatenation method but flip one experiment every two to partially remove discontinuities
@@ -50,9 +49,22 @@ G assumed to be of the following form 1/(Js^2+ds)
 * From the cleaned data, 80% of the experiments was used for the estimation, 20% for the testing
 * Save the best controller C_best
  
-3) Test the C_best estimated with the data corresponding to the pairs Architecture/Decoder with the Architectures listed at point 1 and save the step responses
+The script compared the different estimation methods, the estimation from the single experiment was choosen to advance with the study
 
-4) The goal of the procedure is to try to estimate a controller which adapts well to all given architectures
+4) In the multipleExpEstimation.m, the following techniques were tried:
+
+The experiments were extracted from logs_eval_gains_2019_10_09_10_18__2020_06_26_30, session containing multiple sessions of experiments
+
+The controller C and whole model W were estimated using the single experiment technique explained in point 3)
+The data were cleaned in the same way explained at point 2)
+
+The best controller and whole model W were chosen testing on all the experiment set
+
+From the best model W, the controller was extracted using algebraic operations
+
+The best Controller and the controller extracted from W were tested on the simulink architectures
+ 
+5) The goal of the study is try to estimate a controller which adapts well to all the architectures
 
 Link to external resources: 
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781

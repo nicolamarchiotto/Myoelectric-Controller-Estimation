@@ -200,7 +200,7 @@ s = tf('s');
 j = 0.068;
 d = 0.01;
 G = 1/(j*s^2 + d*s);
-C = invC(G, allSys{bestModel});
+C = getC_from_G_and_W(G, allSys{bestModel});
 newC = zpk(minreal(C,0.5));
 
 %% remove outliers from myo signals

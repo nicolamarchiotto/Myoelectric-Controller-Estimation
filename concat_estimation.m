@@ -487,10 +487,10 @@ j = 0.068;
 d = 0.01;
 G = 1/(j*s^2 + d*s);
 
-C_single = invC(G, W_bestModelSingle);
+C_single = getC_from_G_and_W(G, W_bestModelSingle);
 newC_Single = zpk(minreal(C_single,0.5))
 C_BM_Single = zpk(C_bestModelSingle)
 
-C_80 = invC(G, W_bestModel80);
+C_80 = getC_from_G_and_W(G, W_bestModel80);
 newC_80 = zpk(minreal(C_80,0.5))
 C_BM_80 = zpk(C_bestModel80)
