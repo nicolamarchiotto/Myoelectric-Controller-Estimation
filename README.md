@@ -54,7 +54,7 @@ G assumed to be of the following form 1/(Js^2+ds)
 
 The estimation from the single experiment was choosen to advance in the project
 
-# multipleExpEstimation.m
+# main.m
 Script were main work for estimation was performed, actions performed in this script
 
 * The experiments were extracted from logs_eval_gains_2019_10_09_10_18__2020_06_26_30, session containing multiple sessions of experiments

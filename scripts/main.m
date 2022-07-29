@@ -236,19 +236,14 @@ Kp = 140;
 Kd = 2;
 Ki = 0;
 
-% Simulink, extract controller from estimated W
-s = tf('s');
-j = 0.068;
-d = 0.01;
 G = 1/(j*s^2 + d*s);
 
-C_single = getC_from_G_and_W(G, W_bestModel);
-C_from_Wbest = zpk(minreal(C_single,0.5));
-C_BM_Single = zpk(C_bestModel);
+% Estimated controller from posErr and torque
+C_best =  zpk(minreal(C_bestModel,0.5));
 
-%% ASSIGN THE CONTROLLER FOR SIMULINK
-%
-Controller=C_from_Wbest;
+% Extracted controller from estimated W
+C_from_Wbest = zpk(minreal(getC_from_G_and_W(G, W_bestModel),0.5));
+
 
 %% PLOTS
 
