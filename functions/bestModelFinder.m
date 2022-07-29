@@ -1,3 +1,8 @@
+% For each model in models, which is a structure of IDTF objects, the function
+% compares the output signal of the iddata contained in the data structure,
+% with the ouput obtained by feeding the model with the input of the
+% iddata, a cumulative fit score is recorded. The model which gives the
+% best fit score is returned
 function [bestModel, bestModelFit, bestModelOutput] = bestModelFinder(models,data)
     bestModelFit = 0;
     bestModelOutput=[];
