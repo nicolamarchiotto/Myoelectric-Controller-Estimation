@@ -7,7 +7,7 @@ batchMultProcessingTest1
 batchMultElaborationTest1Long
 close all
 
-%% BatchKinematicAnalysis
+% BatchKinematicAnalysis
 
 % Requires:
 %  - calling batchElaborationTest1 or batchAdjustElaborationTest1Long 
@@ -16,11 +16,8 @@ save_plots = 0;
 
 time_limit_comp = 4.0;
 time_limit = 10.0;
-time_eps = 0.1;
 normalize = 1;
 reverse_dir = 1;
-plot_mean = 1;
-plot_median = 1;
 
 if fixed_data_long_format % both 1&2
     actualFixedDataTableExpanded = fixedDataLongTableExpanded;
@@ -50,9 +47,9 @@ torqueEpsilon = 0.2;
 
 maxSignalLength = 140;
 
-C_plot_signals = true;
-W_plot_signals = true;
-G_plot_signals = true;
+C_plot_signals = false;
+W_plot_signals = false;
+G_plot_signals = false;
 %% DATA CLEANING
 
 allTrimmedTorque = {};
@@ -206,21 +203,25 @@ clear testIdx;
 C_sys_est = {};
 W_sys_est = {};
 G_sys_est = {};
+
+% option to force estimated model to be stable
+opt = tfestOptions('EnforceStability',true);
+
 for expIdx=1:1:length(allTrimmedRefPos)
     C_est_iddata = iddata(allTrimmedTorque{expIdx}, allTrimmedRefPos{expIdx}, Ts); 
-    C_sys_est{expIdx} = tfest(C_est_iddata, C_num_poles, C_num_zeros); 
+    C_sys_est{expIdx} = tfest(C_est_iddata, C_num_poles, C_num_zeros,opt); 
     
     W_est_iddata = iddata(allTrimmedPos{expIdx}, allTrimmedRefPos{expIdx}, Ts); 
-    W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros); 
+    W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros,opt); 
     
     G_est_iddata = iddata(allTrimmedPos{expIdx}, allTrimmedTorque{expIdx}, Ts); 
-    G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros); 
+    G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros,opt); 
 end
 
-%initialization of variables for plot function
-C_bestModelOutput = [];
-W_bestModelOutput = [];
-G_bestModelOutput = [];
+% initialization of variables for plot function
+C_bestModelOutput = {};
+W_bestModelOutput = {};
+G_bestModelOutput = {};
 clear expIdx;
 %% Find the best C testing on all experiments, O(n^2)
 %
@@ -231,7 +232,7 @@ clear expIdx;
 
 [C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
 
-% Find the best W testing on all experiments, O(n^2)
+%% Find the best W testing on all experiments, O(n^2)
 %
 %
 % CAREFULL, each bestModelFinder is O(n^2)
@@ -239,7 +240,7 @@ clear expIdx;
 %
 [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
-% Find the best G testing on all experiments, O(n^2)
+%% Find the best G testing on all experiments, O(n^2)
 %
 %
 % CAREFULL, each bestModelFinder is O(n^2)
@@ -268,95 +269,20 @@ Kp = 140;
 Kd = 2;
 Ki = 0;
 
-%G = 1/(J*s^2 + D*s);
-G = zpk(G_bestModel);
+G_assumed = 1/(J*s^2 + D*s);
+G_best = zpk(G_bestModel);
+
 % Estimated controller from posErr and torque
 C_best =  zpk(C_bestModel);
 
-% Extracted controller from estimated W
-C_from_Wbest = zpk(getC_from_G_and_W(G, W_bestModel));
+% Extracted controller from estimated W using estimated G
+C_from_Wbest = zpk(getC_from_G_and_W(G_best, W_bestModel));
     
+
 %% PLOTS
-
-close all
-
-% Controller C
-if C_plot_signals
-    for j=1:1:ceil(length(C_iddata)/10)
-        figure(j)
-        sgtitle('Torque of best estimated C'); 
-        for i=1:1:10
-            testIdx=(j-1)*10+i;
-            if(length(allTrimmedTorque)<testIdx)
-                continue
-            end
-            subplot(2,5,i)
-            titleStr=['Test ',num2str(testIdx)]; 
-            hold on;
-            title(titleStr) 
-            plot(0:length(allTrimmedTorque{testIdx})-1,allTrimmedTorque{testIdx});
-            plot(0:length(C_bestModelOutput{testIdx})-1,C_bestModelOutput{testIdx});
-            legend('Location','southoutside')
-            legend('testing', 'estimated model output')
-        end
-    end
-end
-
-k=j;
-clear j;
-
-%% Whole model W
-k = 0;
-if W_plot_signals
-     for j=1:1:ceil(length(W_iddata)/10)
-        figure(j+k)
-        sgtitle('Position best estimated W'); 
-        for i=1:1:10
-            testIdx=(j-1)*10+i;
-            if(length(allTrimmedPos)<testIdx)
-                continue
-            end
-            subplot(2,5,i)
-            titleStr=['Test ',num2str(testIdx)]; 
-            hold on;
-            title(titleStr) 
-            plot(0:length(allTrimmedPos{testIdx})-1,allTrimmedPos{testIdx});
-            plot(0:length(W_bestModelOutput{testIdx})-1,W_bestModelOutput{testIdx});
-            legend('Location','southoutside')
-            legend('testing', 'estimated model output')
-        end
-     end
-end
-clear i j k;
-
-%% Motor G
-k = 0;
-h = 0;
-if G_plot_signals
-     for j=1:1:ceil(length(G_iddata)/10)
-        figure(j+k+h)
-        sgtitle('Position best estimated G'); 
-        for i=1:1:10
-            testIdx=(j-1)*10+i;
-            if(length(allTrimmedPos)<testIdx)
-                continue
-            end
-            subplot(2,5,i)
-            titleStr=['Test ',num2str(testIdx)]; 
-            hold on;
-            title(titleStr) 
-            plot(0:length(allTrimmedPos{testIdx})-1,allTrimmedPos{testIdx});
-            plot(0:length(G_bestModelOutput{testIdx})-1,G_bestModelOutput{testIdx});
-            legend('Location','southoutside')
-            legend('testing', 'estimated model output')
-        end
-     end
-end
-clear i j k h;
-%%
 clc
-plot_C = true;
-plot_W = true;
-plot_G = true;
+plot_C = false;
+plot_W = false;
+plot_G = false;
 
 plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)
