@@ -170,7 +170,7 @@ end
 
 clear expId i k;
 
-%% Construct structures for estimation and testing
+%% Estimate the models
 
 clc;
 

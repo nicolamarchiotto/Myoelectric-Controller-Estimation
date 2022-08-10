@@ -4,7 +4,7 @@
 % iddata, a cumulative fit score is recorded. The model which gives the
 % best fit score is returned
 function [bestModel, bestModelFit, bestModelOutput] = bestModelFinder(models,data)
-    bestModelFit = 0;
+    bestModelFit = -1000;
     bestModelOutput=[];
     for i = 1:length(models)
         %for each estimated model
