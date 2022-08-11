@@ -28,7 +28,7 @@ load resultTable.mat
 
 % GRAVITY COMP - None -> good data - 51 exps 
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "COMP" & actualFixedDataTableExpanded.decoder == "NONE";
-selected_indeces = find(selection)'
+selected_indeces = find(selection)';
 estimationCase = EstimationCasesEnum.COMP;
 torqueMaxAllowed = 5;
 torqueMinAllowed = -5;
@@ -101,14 +101,14 @@ torqueEndEpsilon = 0.2;
 
 maxSignalLength = 140;
 
-G_plot_signals = false;
+G_plot_signals = true;
 
 % variable for removing or not torques which min or max values are outside
 % the torqueMaxAllowed amd torqueMinAllowed declared in DATA FILTERING section
-torqueRangeFiltering = true;
+torqueRangeFiltering = false;
 
 % params for discarding torques signal which decrease after the trimming operation
-discardDecreaseStartingTorque = true;
+discardDecreaseStartingTorque = false;
 discardDecreaseStartingTorqueIdx = 15;
 
 % DATA CLEANING
@@ -194,6 +194,8 @@ for expId = selected_indeces  %for each experiment
 end
 % length(allTrimmedTorque)
 clear trimIdx expId i k;
+length(selected_indeces)
+length(allTrimmedTorque)
 %% Model Estimation
 
 clc;
@@ -229,7 +231,7 @@ clear expIdx;
 % Find the best G testing on all experiments, O(n^2)
 %
 %
-% CAREFULL, each bestModelFinder is O(n^2)
+%% CAREFULL, each bestModelFinder is O(n^2)
 %
 %
 [G_bestModel, G_bestModelFit, G_bestModelOutput] = bestModelFinder(G_sys_est, G_iddata);
