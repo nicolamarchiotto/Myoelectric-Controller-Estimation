@@ -202,7 +202,7 @@ clc;
 
 % Number of poles and zeros for the estimated models
 G_num_zeros = 0;
-G_num_poles = 3;
+G_num_poles = 2;
 
 % construct iddata structures
 G_iddata = {};
@@ -234,7 +234,7 @@ clear expIdx;
 %% CAREFULL, each bestModelFinder is O(n^2)
 %
 %
-[G_bestModel, G_bestModelFit, G_bestModelOutput] = bestModelFinder(G_sys_est, G_iddata);
+[G_bestModel, G_bestModelFit, G_bestModelOutput] = oldBestModelFinder(G_sys_est, G_iddata);
 
 % RESULTS
 clc
@@ -248,15 +248,7 @@ G_assumed = zpk(zero(zpk(1/(J*s^2 + D*s))),pole(zpk(1/(J*s^2 + D*s))),1);
 G_best = zpk(zero(G_bestModel),pole(G_bestModel),1);
 [G_best_num, G_best_den] = tfdata(G_best, 'v');
 
-% SAVE RESULT
-resultTable(size(resultTable,1)+1,:) = {char(estimationCase), G_num_zeros, G_num_poles, length(allTrimmedTorque), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}, {G_assumed}, {pole(G_assumed)}};
-
 %% PLOTS
 clc
-close all
-plot_C = false;
-plot_W = false;
-plot_G = true;
-C_bestModelOutput={}; 
-W_bestModelOutput={};
-plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)
+close all;
+oldPlotFunction(false, false, true, allTrimmedTorque, allTrimmedPos, {}, {}, G_bestModelOutput)

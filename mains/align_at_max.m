@@ -6,6 +6,7 @@ logs_eval_gains_2019_10_09_10_18__2020_06_26_30 %inside testing1\settings folder
 batchMultProcessingTest1
 batchMultElaborationTest1Long
 close all
+%%
 clearvars -except fixedDataLongTableExpanded exoRefSplineCells
 
 actualFixedDataTableExpanded = fixedDataLongTableExpanded;
@@ -19,18 +20,24 @@ selected_indeces = find(selection)';
 estimationCase = EstimationCasesEnum.COMP;
 torqueMaxAllowed = 5;
 torqueMinAllowed = -5;
+
+trimStartIndex = 100;
+
 %% FORCE - PLAIN_P -> bad data after cleaning - 30 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FORCE" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
 estimationCase = EstimationCasesEnum.FORCE_PLAIN_P;
 torqueMaxAllowed = 1;
-torqueMinAllowed = -0.07;
+torqueMinAllowed = -1;
+trimStartIndex = 220;
+
 %% POS_V - PLAIN_P -> decent data after cleaning - 31 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "POS_V" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
 estimationCase = EstimationCasesEnum.POS_V_PLAIN_P;
 torqueMaxAllowed = 1.5;
-torqueMinAllowed = -0.1;
+torqueMinAllowed = -0.5;
+trimStartIndex = 80;
 
 %% IMPORTANT PARAMETERS
 
@@ -53,6 +60,11 @@ discardDecreaseStartingTorqueIdx = 30;
 
 % outliers data filtering based on standard deviation, 
 stdOutlierRemoval = true;
+
+
+
+% Align both pos at torque at zero
+alignAtZero = false;
 
 % DATA CLEANING
 clc
@@ -173,12 +185,50 @@ if stdOutlierRemoval
     end
 end
 
+% Align at zero both position and torque, methods tested for obtaining
+% better starting conditions for responses.
+
+if alignAtZero
+    for expId=1:1:size(allTrimmedTorque,1)
+        torqFirstVal=allTrimmedTorque(expId,1);
+        posFirstVal=allTrimmedPos(expId,1);
+
+        allTrimmedTorque(expId,:) = allTrimmedTorque(expId,:)-torqFirstVal;
+        allTrimmedPos(expId,:) =  allTrimmedPos(expId,:)-posFirstVal;
+    end
+end
+
+
+if alignAtZero
+    for expId=1:1:size(allTrimmedTorque,1)
+        torqFirstVal=allTrimmedTorque(expId,1);
+        posFirstVal=allTrimmedPos(expId,1);
+
+        allTrimmedTorque(expId,:) = allTrimmedTorque(expId,:)-torqFirstVal;
+        allTrimmedPos(expId,:) =  allTrimmedPos(expId,:)-posFirstVal;
+    end
+end
+
+% Trim at start 
+supTorque = [];
+supPos = [];
+for expId=1:1:size(allTrimmedTorque,1)
+    supTorque(expId,:) = allTrimmedTorque(expId, trimStartIndex:end);
+    supPos(expId,:) =  allTrimmedPos(expId, trimStartIndex:end);
+end
+allTrimmedTorque = supTorque;
+allTrimmedPos = supPos;
+clear supTorque supPos;
+
 if G_plot_signals 
     for testIdx=1:1:size(allTrimmedTorque,1)
         plot(hAx3, allTrimmedTorque(testIdx, :));
         plot(hAx4, allTrimmedPos(testIdx, :));
     end
 end
+
+
+size(allTrimmedPos,1)
 %% Model Estimation
 
 clc;
@@ -195,14 +245,14 @@ G_sys_est = {};
 opt = tfestOptions('EnforceStability',true,'InitialCondition','estimate');
 
 for expIdx=1:1:size(allTrimmedTorque,1)
-    G_est_iddata = iddata(allTrimmedTorque(expIdx,:)', allTrimmedPos(expIdx,:)', Ts); 
+    G_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
     G_iddata{expIdx} = G_est_iddata;
     G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros,opt); 
 end
 
 % initialization of variables for plot function
 G_bestModelOutput = {};
-clear expIdx G_sys_est opt;
+clear expIdx G_est_iddata opt;
 
 % Find the best G testing on all experiments, O(n^2)
 %
@@ -212,10 +262,10 @@ clear expIdx G_sys_est opt;
 %
 [G_bestModel, G_bestModelFit, G_bestModelOutput] = bestModelFinder(G_sys_est, G_iddata);
 
-%% RESULTS
+% RESULTS
 clc
 fprintf('\nG: Best model fit from single experiment estimation: %.3f\n', G_bestModelFit);
-
+%%
 s = tf('s');
 J = 0.068;
 D = 0.1; %da 0.1 a 0.001
@@ -227,9 +277,4 @@ G_best = zpk(zero(G_bestModel),pole(G_bestModel),1);
 %% PLOTS
 clc
 close all
-plot_C = false;
-plot_W = false;
-plot_G = true;
-C_bestModelOutput={}; 
-W_bestModelOutput={};
-plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)
+plotFunction(false, false, true, allTrimmedTorque, allTrimmedPos, {}, {}, G_bestModelOutput)
