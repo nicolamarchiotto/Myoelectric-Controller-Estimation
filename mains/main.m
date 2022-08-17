@@ -230,7 +230,7 @@ clear expIdx;
 %
 %
 
-[C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
+[C_bestModel, C_bestModelFit, C_bestModelOutput] = oldBestModelFinder(C_sys_est, C_iddata);
 
 %% Find the best W testing on all experiments, O(n^2)
 %
@@ -238,7 +238,7 @@ clear expIdx;
 % CAREFULL, each bestModelFinder is O(n^2)
 %
 %
-[W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
+[W_bestModel, W_bestModelFit, W_bestModelOutput] = oldBestModelFinder(W_sys_est, W_iddata);
 
 %% Find the best G testing on all experiments, O(n^2)
 %
@@ -246,7 +246,7 @@ clear expIdx;
 % CAREFULL, each bestModelFinder is O(n^2)
 %
 %
-[G_bestModel, G_bestModelFit, G_bestModelOutput] = bestModelFinder(G_sys_est, G_iddata);
+[G_bestModel, G_bestModelFit, G_bestModelOutput] = oldBestModelFinder(G_sys_est, G_iddata);
 
 %% RESULTS
 clc 
@@ -285,4 +285,4 @@ plot_C = false;
 plot_W = false;
 plot_G = false;
 
-plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)
+oldPlotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)

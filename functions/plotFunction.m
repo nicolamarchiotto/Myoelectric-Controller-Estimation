@@ -1,4 +1,4 @@
-function plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput)
+function plotFunction(plot_C, plot_W, plot_G, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, G_bestModelOutput, saveImages, path, estCase)
 
 % Controller C
 if plot_C
@@ -6,7 +6,7 @@ if plot_C
         figure(j)
         sgtitle('Torque of best estimated C'); 
         for i=1:1:10
-            testIdx=(j-1)*10+i
+            testIdx=(j-1)*10+i;
             if(size(allTrimmedTorque,1)<testIdx)
                 continue
             end
@@ -19,7 +19,11 @@ if plot_C
             legend('Location','southoutside')
             legend('testing', 'estimated model output')
         end
-    end
+        if saveImages
+            savePath = path + "C_estimation\\" + string(estCase) + "_" + j + ".png";
+            print(gcf, savePath ,'-dpng','-r300');        
+        end
+     end
     k=j;
 else
      k=0;
@@ -44,6 +48,10 @@ if plot_W
             plot(1:size(W_bestModelOutput,2),W_bestModelOutput(testIdx,:));
             legend('Location','southoutside')
             legend('testing', 'estimated model output')
+        end
+        if saveImages
+            savePath = path + "W_estimation\\" + string(estCase) + "_" + j + ".png";
+            print(gcf, savePath ,'-dpng','-r300');        
         end
      end
     h=j;
@@ -70,6 +78,10 @@ if plot_G
             plot(1:size(G_bestModelOutput,2),G_bestModelOutput(testIdx,:));
             legend('Location','southoutside')
             legend('testing', 'estimated model output')
+        end
+        if saveImages
+            savePath = path + "G_estimation\\" + string(estCase) + "_" + j + ".png";
+            print(gcf, savePath ,'-dpng','-r300');        
         end
      end
 end

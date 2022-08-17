@@ -341,9 +341,9 @@ end
 
 clear expIdx;
 
-[C_bestModelSingle, C_bestModelFitSingle, C_bestModelOutputSingle] = bestModelFinder(C_sys_est, C_testing_iddata);
+[C_bestModelSingle, C_bestModelFitSingle, C_bestModelOutputSingle] = oldBestModelFinder(C_sys_est, C_testing_iddata);
 
-[W_bestModelSingle, W_bestModelFitSingle, W_bestModelOutputSingle] = bestModelFinder(W_sys_est, W_testing_iddata);
+[W_bestModelSingle, W_bestModelFitSingle, W_bestModelOutputSingle] = oldBestModelFinder(W_sys_est, W_testing_iddata);
 
 % Method 2) Controller estimation using the 80% of experiments
 estPosError80 = [];
@@ -396,8 +396,8 @@ clear expIdx;
 C_sys_est_80{1} = tfest(iddata(estTorque80, estPosError80, Ts), C_num_poles, C_num_zeros); 
 W_sys_est_80{1} = tfest(iddata(estPos80, estRefPos80, Ts), W_num_poles, W_num_zeros); 
 
-[C_bestModel80, C_bestModelFit80, C_bestModelOutput80] = bestModelFinder(C_sys_est_80, C_testing_iddata);
-[W_bestModel80, W_bestModelFit80, W_bestModelOutput80] = bestModelFinder(W_sys_est_80, W_testing_iddata);
+[C_bestModel80, C_bestModelFit80, C_bestModelOutput80] = oldBestModelFinder(C_sys_est_80, C_testing_iddata);
+[W_bestModel80, W_bestModelFit80, W_bestModelOutput80] = oldBestModelFinder(W_sys_est_80, W_testing_iddata);
 
 % RESULTS
 clc
