@@ -1,4 +1,4 @@
-classdef EstimationCasesEnum < int32
+classdef ArchitectureEnum < int32
    enumeration
       COMP_NONE(1), 
       FORCE_PLAIN_P(2), POS_V_PLAIN_P(3), FIX_IMP_PLAIN_P(4), ADM_PLAIN_P(5), FORCE_INT_PLAIN_P(6), 
