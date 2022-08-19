@@ -4,30 +4,65 @@ Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
  
 **THE GOAL OF THE PROJECT IS TRY TO ESTIMATE A GENERAL CONTROLLER WHICH ADAPTS WELL TO ALL CONTROL ARCHITECTURES USED IN THE STUDY**
 
-In all the scripts of this repo the following action are performed
+List of control architecture and adapters used to collect the data used for the estimation
 
-1) Data import from the logs files, 
-Chose data of the experiments acquired using a certain control architecture and decoder
-Controller estimations from single and multiples log files were tried
-
-* List of control architecture used for data collection
 ```    
-COMP               
-FORCE
-FORCE_INT           
-ADM
-FIX_IMP
-POS_V           
+COMP        -   NONE               
+FORCE       -   PLAIN_P
+POS_V       -   PLAIN_P
+FIX_IMP     -   PLAIN_P
+ADM         -   PLAIN_P
+FORCE_INT   -   PLAIN_P
+FORCE       -   MULTICH8
+POS_V       -   MULTICH8
+FIX_IMP     -   MULTICH8
+ADM         -   MULTICH8
+FORCE_INT   -   MULTICH8      
 ```
 
-* List of control architecture used for data collection
-```
-NONE (MULTI8)
-MULTI8
-PLAIN (with different gains)
-```
+The data used in the scripts are defined inside the `myo_tools_testing\testing_version1\settings\logs_eval_gains_2019_10_09_10_18__2020_06_26_30` file
 
-2) Data Cleaning: temporally align position and torque signals to have only the actual motion considered, remove outliers by get rod of experiments which outliers do not end up in zero +- a given theshold
+Two techniques were used:
+
+* Controller estimation from reference position as input and torque as output
+* Estimation of the whole model W, Controller C plus Mechanical system G, assuming a PD controller. Then performing algebraic operations to extract C
+
+To have better results in second technique, the estimation of G was faced at first to validate our assumptions
+
+## Data Cleaning
+In the scripts were G and C were estimated, data cleaning operations were performed before the actual estimation
+
+An experiment was considered an outlier if it was charaterized by one of the following aspects 
+
+* The last value of the torque signal to be outside a small range.
+* Considered an outlier by the `rmoutliers` matlab function, so for each temporal istant, if the mean of all the torque value of that istant, is more than 3 standard deviations computed for the istant
+
+After the cleaning operation, the signal were trimmed at start to remove the non relevant portion of the signal
+
+## Estimation pipeline
+To estimate the models, the `tfest` function was exploited
+From each experiment contained in the cleaned set, a model was estimated
+Then every experiment of the cleaned set was used to validate the computed models
+
+## Mechanical Model Estimation - File `G_estimation` 
+
+We wanted to validate our assumption where G has the following form `1/(J*s^2+d*s)` 
+To estimate G 3 approaches were used, the results of these approaches were saved in the `resultStructures` folder
+
+1) Estimation from torque to position 
+...This was the first estimation approach tested - results saved in the `G_resultTable` variable
+
+2) Estimation from torque to position and setting the end tail of the torque signal to zero 
+...From the first approach we noticed that sometimes the posisition output from the estimated mechanical model diverged even if the torque was set costant at the end of the signal for a consistent amount of time. The reason for this behaviour is that the mechanical model contains an integrator, so even if the torque signal is set to costant, the error accumulates making the position diverge - results saved in the `G_resultTable_zero` variable
+
+3) Estimation from torque to velocity 
+...Given the considerations discusses at point 2, we tried to estimate the mechanical model from torque and velocity, excluding the estimation of the pole in 0, the one responsible of the integration in the control architecture - results saved in the `G_resultTable_vel` variable
+
+### G estimation Results
+
+## Controller Estimation
+
+### C estimation Results
 
 # concat_estimation.m
 The script compares different estimation methods, actions performed in this script

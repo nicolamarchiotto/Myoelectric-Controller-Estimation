@@ -1,8 +1,13 @@
-function G_plotFunction(allTrimmedTorque, allTrimmedPos, G_bestModelOutput, saveImages, path, architecture)
+function G_plotFunction(allTrimmedTorque, allTrimmedPos, allTrimmedVel, G_bestModelOutput, saveImages, path, architecture, G_estCase)
 
 for j=1:1:ceil(size(allTrimmedTorque,1)/10)
     figure(j)
-    sgtitle('Position best estimated G');
+  
+    if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
+          sgtitle('Velocity best estimated G');
+    else
+        sgtitle('Position best estimated G');
+    end
     for i=1:1:10
         testIdx=(j-1)*10+i;
         if(size(allTrimmedTorque,1)<testIdx)
@@ -12,7 +17,13 @@ for j=1:1:ceil(size(allTrimmedTorque,1)/10)
         titleStr=['Test ',num2str(testIdx)];
         hold on;
         title(titleStr)
-        plot(1:size(allTrimmedPos,2),allTrimmedPos(testIdx,:));
+        
+        if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
+            plot(1:size(allTrimmedVel,2),allTrimmedVel(testIdx,:));
+        else
+            plot(1:size(allTrimmedPos,2),allTrimmedPos(testIdx,:));    
+        end
+            
         plot(1:size(G_bestModelOutput,2),G_bestModelOutput(testIdx,:));
         legend('Location','southoutside')
         legend('testing', 'estimated model output')
