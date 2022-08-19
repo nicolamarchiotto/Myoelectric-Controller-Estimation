@@ -7,7 +7,7 @@ batchMultProcessingTest1
 batchMultElaborationTest1Long
 close all
 %%
-clearvars -except fixedDataLongTableExpanded exoRefSplineCells
+clearvars -except fixedDataLongTableExpanded exoRefSplineCells 
 
 actualFixedDataTableExpanded = fixedDataLongTableExpanded;
 clc
@@ -17,22 +17,27 @@ sz = [1 9];
 varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell'};
 varNames = {'Type', '# zeros', '# poles', '# est exps', 'est model', 'est fit', 'est num', 'est den', 'est poles, (s+p)'};
 G_resultTable = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
+G_resultTable_zero = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
+G_resultTable_vel = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
 
 clear varTypes varNames sz
 
 %% SAVE G RESULT TABLE - To store results of experiments up to now
 save G_resultTable
+save G_resultTable_zero
+save G_resultTable_vel
 
 %% LOAD G RESULT TABLE - If already defined system
-load G_resultTable.mat
-
+load('G_resultTable.mat')
+load('G_resultTable_zero.mat')
+load('G_resultTable_vel.mat')
 
 %% DATA FILTERING: Architecture - Decoder
 
 % GRAVITY COMP - None -> good data - 64 exps 
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "COMP" & actualFixedDataTableExpanded.decoder == "NONE";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.COMP_NONE;
+architecture = ArchitectureEnum.COMP_NONE;
 torqueMaxAllowed = 5;
 torqueMinAllowed = -5;
 
@@ -41,22 +46,22 @@ trimStartIndex = 100;
 %% FORCE - PLAIN_P -> bad data after cleaning - 35 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FORCE" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FORCE_PLAIN_P;
+architecture = ArchitectureEnum.FORCE_PLAIN_P;
 torqueMaxAllowed = 1;
 torqueMinAllowed = -1;
-trimStartIndex = 220;
+trimStartIndex = 30;
 
 %% POS_V - PLAIN_P -> decent data after cleaning - 22 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "POS_V" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.POS_V_PLAIN_P;
+architecture = ArchitectureEnum.POS_V_PLAIN_P;
 torqueMaxAllowed = 1.5;
 torqueMinAllowed = -0.5;
-trimStartIndex = 80;
+trimStartIndex = 30;
 %% FIX_IMP - PLAIN_P -> decent data after cleaning - 29 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FIX_IMP" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FIX_IMP_PLAIN_P;
+architecture = ArchitectureEnum.FIX_IMP_PLAIN_P;
 torqueMaxAllowed = 1.5;
 torqueMinAllowed = -0.5;
 trimStartIndex = 45;
@@ -64,7 +69,7 @@ trimStartIndex = 45;
 %% ADM - PLAIN_P -> decent data after cleaning - 24 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "ADM" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.ADM_PLAIN_P;
+architecture = ArchitectureEnum.ADM_PLAIN_P;
 torqueMaxAllowed = 0.5;
 torqueMinAllowed = -0.075;
 trimStartIndex = 50;
@@ -72,7 +77,7 @@ trimStartIndex = 50;
 %% FORCE_INT - PLAIN_P -> 26 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FORCE_INT" & actualFixedDataTableExpanded.decoder == "PLAIN_P";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FORCE_INT_PLAIN_P;
+architecture = ArchitectureEnum.FORCE_INT_PLAIN_P;
 torqueMaxAllowed = 5;
 torqueMinAllowed = -1;
 trimStartIndex = 50;
@@ -81,7 +86,7 @@ trimStartIndex = 50;
 %% FORCE - MULTICH8 -> bad data  - 23 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FORCE" & actualFixedDataTableExpanded.decoder == "MULTICH8";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FORCE_MULTICH8;
+architecture = ArchitectureEnum.FORCE_MULTICH8;
 torqueMaxAllowed = 0.5;
 torqueMinAllowed = -0.2;
 trimStartIndex = 10;
@@ -89,7 +94,7 @@ trimStartIndex = 10;
 %% POS_V - MULTICH8 -> good data after cleaning - 25 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "POS_V" & actualFixedDataTableExpanded.decoder == "MULTICH8";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.POS_V_MULTICH8;
+architecture = ArchitectureEnum.POS_V_MULTICH8;
 torqueMaxAllowed = 1.5;
 torqueMinAllowed = -0.5;
 trimStartIndex = 50;
@@ -97,7 +102,7 @@ trimStartIndex = 50;
 %% FIX_IMP - MULTICH8 -> good data after cleaning - 28 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FIX_IMP" & actualFixedDataTableExpanded.decoder == "MULTICH8";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FIX_IMP_MULTICH8;
+architecture = ArchitectureEnum.FIX_IMP_MULTICH8;
 torqueMaxAllowed = 1.5;
 torqueMinAllowed = -0.5;
 trimStartIndex = 90;
@@ -105,7 +110,7 @@ trimStartIndex = 90;
 %% ADM - MULTICH8 -> bad data after cleaning - 38 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "ADM" & actualFixedDataTableExpanded.decoder == "MULTICH8";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.ADM_MULTICH8;
+architecture = ArchitectureEnum.ADM_MULTICH8;
 torqueMaxAllowed = 0.3;
 torqueMinAllowed = -0.05;
 trimStartIndex = 110;
@@ -113,7 +118,7 @@ trimStartIndex = 110;
 %% FORCE_INT - MULTICH8 -> 46 exps
 selection = actualFixedDataTableExpanded.direction == "F" & actualFixedDataTableExpanded.target == "POS1" & actualFixedDataTableExpanded.controller == "FORCE_INT" & actualFixedDataTableExpanded.decoder == "MULTICH8";
 selected_indeces = find(selection)';
-estimationCase = EstimationCasesEnum.FORCE_INT_MULTICH8;
+architecture = ArchitectureEnum.FORCE_INT_MULTICH8;
 torqueMaxAllowed = 5;
 torqueMinAllowed = -5;
 trimStartIndex = 60;
@@ -126,21 +131,30 @@ torqueEndEpsilon = 0.2;
 
 maxSignalLength = 400;
 
+% SET G ESTIMATION TECHNIQUE
+
+% G_estCase=GEstCasesEnum.NO_TORQUE_EDIT;
+G_estCase=GEstCasesEnum.TORQUE_END_AT_ZERO;
+% G_estCase=GEstCasesEnum.TORQUE_VEL_ESTIMATION;
+
 G_plot_signals = true;
 
 % variable for removing or not torques which min or max values are outside
 % the torqueMaxAllowed amd torqueMinAllowed declared in DATA FILTERING section
-torqueRangeFiltering = true;
+torqueRangeFiltering = false;
 
 % params for discarding torques signal which decrease after the trimming operation
-discardDecreaseStartingTorque = true;
+discardDecreaseStartingTorque = false;
 discardDecreaseStartingTorqueIdx = 30;
 
 % outliers data filtering based on standard deviation, 
 stdOutlierRemoval = true;
 
-% Align both pos at torque at zero
-alignAtZero = false;
+% align the torque signal at max
+alignAtMax = false;
+
+% trim signals at start
+trimAtStart = true;
 
 % DATA CLEANING
 clc
@@ -148,18 +162,26 @@ close all
 
 allTrimmedTorque = [];
 allTrimmedPos = [];
+allTrimmedVel = [];
 
 if G_plot_signals
     figure; 
-    hAx1 = subplot(2,1,1);
+    hAx1 = subplot(3,1,1);
     title('Torque output from experiments')
-    hAx2 = subplot(2,1,2);
+    hAx2 = subplot(3,1,2);
     title('Position of the experiments') 
+    hAx3 = subplot(3,1,3);
+    title('Velocity of the experiments') 
+    
     figure; 
-    hAx3 = subplot(2,1,1);
+    hAx4 = subplot(3,1,1);
     title('FILT: Torque output from experiments')
-    hAx4 = subplot(2,1,2);
-    title('FILT: Position of the experiments') 
+    hAx5 = subplot(3,1,2);
+    title('FILT: Position of the experiments')  
+    hAx6 = subplot(3,1,3);
+    title('FILT: Velocity of experiments')
+    
+    
     axes(hAx1)
     hold on
     axes(hAx2)
@@ -168,37 +190,46 @@ if G_plot_signals
     hold on
     axes(hAx4)
     hold on
+    axes(hAx5)
+    hold on
+    axes(hAx6)
+    hold on
+    
 end
 
 % Find the torque index of the further max value of the entire set
-maxIdx = 0;
 
 % Find greater max torque value idx of the various signals 
-for expId = selected_indeces 
-    % vector of torques
-    tagIdx = fixedDataLongTableExpanded(expId,:).tag_idx;
+if alignAtMax
+    maxIdx = 0;
+    for expId = selected_indeces 
+        % vector of torques
+        tagIdx = fixedDataLongTableExpanded(expId,:).tag_idx;
 
-    torque = exoRefSplineCells{tagIdx}.reference(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
+        torque = exoRefSplineCells{tagIdx}.reference(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
 
-    [maxVal, idx] = max(torque);
-    if(idx > maxIdx)
-        maxIdx = idx;
+        [maxVal, idx] = max(torque);
+        if(idx > maxIdx)
+            maxIdx = idx;
+        end
     end
+    clear tagIdx expId idx;
 end
-clear tagIdx expId idx;
 
 i = 1;
 for expId = selected_indeces  %for each experiment
-    % vector of torques
     tagIdx = fixedDataLongTableExpanded(expId,:).tag_idx;
     
-    %vector of positions of the experiment
+    % vector of position
     position = exoRefSplineCells{tagIdx}.thetaE(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
     
-    % vector of torques
+    % vector of velocity
+    velocity = exoRefSplineCells{tagIdx}.dThetaE(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
+   
+    % vector of torque
     torque = exoRefSplineCells{tagIdx}.reference(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
-
-    % Torque outliers elimination
+    
+     % Torque outliers elimination
     if abs(torque(end)) > torqueEndEpsilon
         continue;
     end
@@ -209,42 +240,73 @@ for expId = selected_indeces  %for each experiment
         continue;
     end
     
-    [maxVal, idx] = max(torque);
     
-    pointsToAddStart = maxIdx - idx; 
-    
+    augmTorque = [];
+    augmPos = [];
+    augmVel = [];
+
     firstValOfTorque = torque(1);
     firstValOfPos = position(1);
-    
+
     lastValOfTorque = torque(end);
     lastValOfPos = position(end);
     
-    % signal where the torque max value is at the same index for all exps
-    augmTorque = [ones(pointsToAddStart,1)*firstValOfTorque; torque];
-    augmPos = [ones(pointsToAddStart,1)*firstValOfPos; position];
-  
+    % Align signal to the maximum value of torque
+    if alignAtMax
+        [maxVal, idx] = max(torque);
+
+        pointsToAddStart = maxIdx - idx; 
+
+        % signal where the torque max value is at the same index for all exps
+        augmTorque = [ones(pointsToAddStart,1)*firstValOfTorque; torque];
+        augmPos = [ones(pointsToAddStart,1)*firstValOfPos; position];
+        augmVel = [zeros(pointsToAddStart,1); velocity];
+    else
+        augmTorque = torque;
+        augmPos = position;
+        augmVel = velocity;
+    end
+    
     adjustedTorque = []; 
     adjustedPos = [];
+    adjustedVel = [];
     
     if(length(augmTorque) < maxSignalLength)
         pointsToAddAtEnd = maxSignalLength - length(augmTorque);
-        adjustedTorque = [augmTorque; ones(pointsToAddAtEnd,1)*lastValOfTorque];
         adjustedPos = [augmPos; ones(pointsToAddAtEnd,1)*lastValOfPos]; 
+        adjustedVel = [augmVel; zeros(pointsToAddAtEnd,1)];
+        
+        if G_estCase==GEstCasesEnum.NO_TORQUE_EDIT
+            adjustedTorque = [augmTorque; ones(pointsToAddAtEnd,1)*lastValOfTorque];
+        end
+        
+        if G_estCase==GEstCasesEnum.TORQUE_END_AT_ZERO || G_estCase==GEstCasesEnum.TORQUE_VEL_ESTIMATION
+            adjustedTorque = [augmTorque; zeros(pointsToAddAtEnd,1)];
+        end
     else
         adjustedTorque = augmTorque(1:maxSignalLength);
         adjustedPos = augmPos(1:maxSignalLength);
+        adjustedVel = augmVel(1:maxSignalLength);
     end
     
-    adjustedTorque = [adjustedTorque; ones(maxSignalLength/2,1)*adjustedTorque(end)];
-    adjustedPos = [adjustedPos; ones(maxSignalLength/2,1)*adjustedPos(end)];
+    if G_estCase==GEstCasesEnum.TORQUE_END_AT_ZERO || G_estCase==GEstCasesEnum.TORQUE_VEL_ESTIMATION
+       adjustedTorque = [adjustedTorque; zeros(maxSignalLength,1)];
+    else
+        adjustedTorque = [adjustedTorque; ones(maxSignalLength,1)*adjustedTorque(end)];
+    end
+    adjustedPos = [adjustedPos; ones(maxSignalLength,1)*adjustedPos(end)];    
+    adjustedVel = [adjustedVel; ones(maxSignalLength,1)*adjustedVel(end)];    
     
-    allTrimmedTorque(i,:) = adjustedTorque;
-    allTrimmedPos(i,:) = adjustedPos;
+    
+    allTrimmedTorque(i,:) = adjustedTorque';
+    allTrimmedPos(i,:) = adjustedPos';
+    allTrimmedVel(i,:) = adjustedVel';
     
     i = i+1;
-    if G_plot_signals 
+    if G_plot_signals
         plot(hAx1,torque);
         plot(hAx2,position);
+        plot(hAx3,velocity);
     end
 end
 
@@ -261,48 +323,35 @@ if stdOutlierRemoval
     end
 end
 
-% Align at zero both position and torque, methods tested for obtaining
-% better starting conditions for responses.
 
-if alignAtZero
+% Trim at start, only of align at max is disabled 
+if trimAtStart
+    supTorque = [];
+    supPos = [];
+    supVel = [];
+
     for expId=1:1:size(allTrimmedTorque,1)
-        torqFirstVal=allTrimmedTorque(expId,1);
-        posFirstVal=allTrimmedPos(expId,1);
-
-        allTrimmedTorque(expId,:) = allTrimmedTorque(expId,:)-torqFirstVal;
-        allTrimmedPos(expId,:) =  allTrimmedPos(expId,:)-posFirstVal;
+        supTorque(expId,:) = allTrimmedTorque(expId, trimStartIndex:end);
+        supPos(expId,:) =  allTrimmedPos(expId, trimStartIndex:end);
+        supVel(expId,:) =  allTrimmedVel(expId, trimStartIndex:end);
     end
+    allTrimmedTorque = supTorque;
+    allTrimmedPos = supPos;
+    allTrimmedVel = supVel;
+
+    clear supTorque supPos;
 end
-
-
-if alignAtZero
-    for expId=1:1:size(allTrimmedTorque,1)
-        torqFirstVal=allTrimmedTorque(expId,1);
-        posFirstVal=allTrimmedPos(expId,1);
-
-        allTrimmedTorque(expId,:) = allTrimmedTorque(expId,:)-torqFirstVal;
-        allTrimmedPos(expId,:) =  allTrimmedPos(expId,:)-posFirstVal;
-    end
-end
-
-% Trim at start 
-supTorque = [];
-supPos = [];
-for expId=1:1:size(allTrimmedTorque,1)
-    supTorque(expId,:) = allTrimmedTorque(expId, trimStartIndex:end);
-    supPos(expId,:) =  allTrimmedPos(expId, trimStartIndex:end);
-end
-allTrimmedTorque = supTorque;
-allTrimmedPos = supPos;
-clear supTorque supPos;
-
+ 
 if G_plot_signals 
     for testIdx=1:1:size(allTrimmedTorque,1)
-        plot(hAx3, allTrimmedTorque(testIdx, :));
-        plot(hAx4, allTrimmedPos(testIdx, :));
+        plot(hAx4, allTrimmedTorque(testIdx, :));
+        plot(hAx5, allTrimmedPos(testIdx, :));
+        plot(hAx6, allTrimmedVel(testIdx, :));
     end
 end
-
+% clear hAx1 hAx2 hAx3 hAx4 hAx5 firstValOfPos firstValOfTorque expId augmPos augmTorque 
+% clear adjustedPos adjustedVel adjustedTorque i maxIdx pointsToAddStart pointsToAddAtEnd
+% clear torque position
 
 size(allTrimmedPos,1)
 %% Model Estimation
@@ -311,7 +360,12 @@ clc;
 
 % Number of poles and zeros for the estimated models
 G_num_zeros = 0;
-G_num_poles = 2;
+
+if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
+    G_num_poles = 1;
+else
+    G_num_poles = 2;
+end
 
 % For each esperiment estimate G, O(n) and construct iddata structures
 G_iddata = {};
@@ -321,9 +375,13 @@ G_sys_est = {};
 opt = tfestOptions('EnforceStability',true,'InitialCondition','estimate');
 
 for expIdx=1:1:size(allTrimmedTorque,1)
-    G_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
+    if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
+        G_est_iddata = iddata(allTrimmedVel(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
+    else
+        G_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
+    end
     G_iddata{expIdx} = G_est_iddata;
-    G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros,opt); 
+    G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros,opt);
 end
 
 % initialization of variables for plot function
@@ -341,19 +399,33 @@ clear expIdx G_est_iddata opt;
 % RESULTS
 clc
 fprintf('\nG: Best model fit from single experiment estimation: %.3f\n', G_bestModelFit);
-%
-% s = tf('s');
-% J = 0.068;
-% D = 0.1; %da 0.1 a 0.001
-% G_assumed = zpk(zero(zpk(1/(J*s^2 + D*s))),pole(zpk(1/(J*s^2 + D*s))),1);
-% [G_Assumed_num, G_Assumed_den] = tfdata(G_assumed, 'v');
+
+
 G_best = zpk(zero(G_bestModel),pole(G_bestModel),1);
 [G_best_num, G_best_den] = tfdata(G_best, 'v');
 
-G_resultTable(estimationCase, :) = {char(estimationCase), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
+
+% switch G_estCase
+%     case GEstCasesEnum.NO_TORQUE_EDIT
+%         G_resultTable(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
+%     case GEstCasesEnum.TORQUE_END_AT_ZERO
+%         G_resultTable_zero(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
+%     case GEstCasesEnum.TORQUE_VEL_ESTIMATION
+%         G_resultTable_vel(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
+% end
 
 % PLOTS
 close all
-imageSavePath = "C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\images\\";
-saveImage = true;
-plotFunction(false, false, true, allTrimmedTorque, allTrimmedPos, {}, {}, G_bestModelOutput, saveImage, imageSavePath, estimationCase)
+imageSavePath = "C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\images\\G_estimation\\";
+saveImage = false;
+
+switch G_estCase
+    case GEstCasesEnum.NO_TORQUE_EDIT
+        imageSavePath = imageSavePath + "noTorqueEdit//";
+    case GEstCasesEnum.TORQUE_END_AT_ZERO
+        imageSavePath = imageSavePath + "torqueEndAtZero//";
+    case GEstCasesEnum.TORQUE_VEL_ESTIMATION
+        imageSavePath = imageSavePath + "torqueVelEstimation//";
+end
+
+G_plotFunction(allTrimmedTorque, allTrimmedPos, G_bestModelOutput, saveImage, imageSavePath, architecture )

@@ -1,11 +1,4 @@
-function G_plotFunction(allTrimmedTorque, allTrimmedPos, G_bestModelOutput, saveImages, path, architecture, G_estCase)
-if G_estCase == GEstCasesEnum.TORQUE_END_AT_ZERO
-    path= path+"torqueEndAtZero//";
-end
-
-if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
-    path= path+"torqueVelEstimation//";
-end
+function G_plotFunction(allTrimmedTorque, allTrimmedPos, G_bestModelOutput, saveImages, path, architecture)
 
 for j=1:1:ceil(size(allTrimmedTorque,1)/10)
     figure(j)
