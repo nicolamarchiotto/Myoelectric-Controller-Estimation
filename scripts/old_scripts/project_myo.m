@@ -21,7 +21,7 @@ normalize = 1;
 reverse_dir = 1;
 plot_mean = 1;
 plot_median = 1;
-
+%%
 if fixed_data_long_format % both 1&2
     actualFixedDataTableExpanded = fixedDataLongTableExpanded_adjusted;
 else

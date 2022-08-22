@@ -1,4 +1,4 @@
-%% G ESTIMATION SCRIPT
+%% C ESTIMATION SCRIPT
 % DATA IMPORT
 clc
 clear
@@ -7,34 +7,35 @@ logs_eval_gains_2019_10_09_10_18__2020_06_26_30 %inside testing1\settings folder
 batchMultProcessingTest1
 batchMultElaborationTest1Long
 close all
-%%
-clearvars -except fixedDataLongTableExpanded exoRefSplineCells 
-
 actualFixedDataTableExpanded = fixedDataLongTableExpanded;
 
 pathToGitFolder = 'C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\';
+%%
+clearvars -except exoRefSplineCells actualFixedDataTableExpanded pathToGitFolder
+
 
 %% DEFINITION OF G RESULT TABLE
-sz = [1 9];
+C_sz = [1 9];
+W_sz = [1 10];
 
-varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell'};
-varNames = {'Type', '# zeros', '# poles', '# est exps', 'est model', 'est fit', 'est num', 'est den', 'est poles, (s+p)'};
-G_resultTable = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
-G_resultTable_zero = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
-G_resultTable_vel = table('Size', sz, 'VariableTypes', varTypes, 'VariableNames', varNames);
+C_varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell'};
+C_varNames = {'Architecture', '# zeros', '# poles', '# est exps', 'C model', 'C fit', 'C num', 'C den', 'C poles, (s+p)'};
 
-clear varTypes varNames sz
+W_varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell', 'cell'};
+W_varNames = {'Architecture', '# zeros', '# poles', '# est exps', 'W model', 'W fit', 'C model', 'C num', 'C den', 'C poles, (s+p)'};
+
+C_resultTable = table('Size', C_sz, 'VariableTypes', C_varTypes, 'VariableNames', C_varNames);
+W_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
+
+clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz
 
 %% SAVE G RESULT TABLE - To store results of experiments up to now
-save(pathToGitFolder + "resultStructures\\G_resultTable.mat", 'G_resultTable')
-save(pathToGitFolder + "resultStructures\\G_resultTable_zero.mat", 'G_resultTable_zero')
-save(pathToGitFolder + "resultStructures\\G_resultTable_vel.mat", 'G_resultTable_vel')
+save(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
+save(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
 
 %% LOAD G RESULT TABLE - If already defined system
-load(pathToGitFolder + "resultStructures\\G_resultTable.mat", 'G_resultTable')
-load(pathToGitFolder + "resultStructures\\G_resultTable_zero.mat", 'G_resultTable_zero')
-load(pathToGitFolder + "resultStructures\\G_resultTable_vel.mat", 'G_resultTable_vel')
-
+load(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
+load(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
 
 
 %
@@ -121,11 +122,8 @@ maxSignalLength = 400;
 
 % SET G ESTIMATION TECHNIQUE
 
-% G_estCase=GEstCasesEnum.NO_TORQUE_EDIT;
-% G_estCase=GEstCasesEnum.TORQUE_END_AT_ZERO;
-G_estCase=GEstCasesEnum.TORQUE_VEL_ESTIMATION;
-
-G_plot_signals = true;
+C_plot_signals = true;
+W_plot_signals = true;
 
 % Outliers data filtering based on standard deviation
 % Remove outliers of a vector where an outlier is defined as a point more 
@@ -138,26 +136,24 @@ trimAtStart = true;
 clc
 close all
 
+allTrimmedPosErr = [];
 allTrimmedTorque = [];
-allTrimmedPos = [];
-allTrimmedVel = [];
 
-if G_plot_signals
+allTrimmedPosRef = [];
+allTrimmedPos = [];
+
+if C_plot_signals
     figure; 
-    hAx1 = subplot(3,1,1);
-    title('Torque output from experiments')
-    hAx2 = subplot(3,1,2);
-    title('Position of the experiments') 
-    hAx3 = subplot(3,1,3);
-    title('Velocity of the experiments') 
+    hAx1 = subplot(2,1,1);   
+    title('Position error of the experiments') 
+    hAx2 = subplot(2,1,2);
+    title('Torque output of experiments')
     
     figure; 
-    hAx4 = subplot(3,1,1);
-    title('FILT: Torque output from experiments')
-    hAx5 = subplot(3,1,2);
-    title('FILT: Position of the experiments')  
-    hAx6 = subplot(3,1,3);
-    title('FILT: Velocity of experiments')
+    hAx3 = subplot(2,1,1);    
+    title('FILT: Position error of the experiments')
+    hAx4 = subplot(2,1,2);
+    title('FILT: Torque output of experiments')
     
     
     axes(hAx1)
@@ -168,28 +164,46 @@ if G_plot_signals
     hold on
     axes(hAx4)
     hold on
+end
+
+if W_plot_signals
+    figure; 
+    hAx5 = subplot(2,1,1);   
+    title('Reference position of the experiments') 
+    hAx6 = subplot(2,1,2);
+    title('Position output of experiments')
+    
+    figure; 
+    hAx7 = subplot(2,1,1);    
+    title('FILT: Reference position of the experiments')
+    hAx8 = subplot(2,1,2);
+    title('FILT: Position output of experiments')
+    
     axes(hAx5)
     hold on
     axes(hAx6)
     hold on
-    
+    axes(hAx7)
+    hold on
+    axes(hAx8)
+    hold on
 end
 
 
 i = 1;
 for expId = selected_indeces  %for each experiment
-    tagIdx = fixedDataLongTableExpanded(expId,:).tag_idx;
+    tagIdx = actualFixedDataTableExpanded(expId,:).tag_idx;
     
     % vector of position
-    position = exoRefSplineCells{tagIdx}.thetaE(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
+    position = exoRefSplineCells{tagIdx}.thetaE(actualFixedDataTableExpanded(expId,:).start_idx:actualFixedDataTableExpanded(expId,:).end_idx);
     
-    % vector of velocity
-    velocity = exoRefSplineCells{tagIdx}.dThetaE(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
-   
     % vector of torque
-    torque = exoRefSplineCells{tagIdx}.reference(fixedDataLongTableExpanded(expId,:).start_idx:fixedDataLongTableExpanded(expId,:).end_idx);
+    torque = exoRefSplineCells{tagIdx}.reference(actualFixedDataTableExpanded(expId,:).start_idx:actualFixedDataTableExpanded(expId,:).end_idx);
     
-     % Torque outliers elimination
+    %reference position value
+    referencePosVal = actualFixedDataTableExpanded(expId,:).target_angle;
+    
+    % Torque outliers elimination
     if abs(torque(end)) > torqueEndEpsilon
         continue;
     end    
@@ -202,43 +216,37 @@ for expId = selected_indeces  %for each experiment
     
     adjustedTorque = []; 
     adjustedPos = [];
-    adjustedVel = [];
     
     if(length(torque) < maxSignalLength)
         pointsToAddAtEnd = maxSignalLength - length(torque);
         adjustedPos = [position; ones(pointsToAddAtEnd,1)*lastValOfPos]; 
-        adjustedVel = [velocity; zeros(pointsToAddAtEnd,1)];
-        
-        if G_estCase==GEstCasesEnum.NO_TORQUE_EDIT
-            adjustedTorque = [torque; ones(pointsToAddAtEnd,1)*lastValOfTorque];
-        end
-        
-        if G_estCase==GEstCasesEnum.TORQUE_END_AT_ZERO || G_estCase==GEstCasesEnum.TORQUE_VEL_ESTIMATION
-            adjustedTorque = [torque; zeros(pointsToAddAtEnd,1)];
-        end
+        adjustedTorque = [torque; zeros(pointsToAddAtEnd,1)];
     else
         adjustedTorque = torque(1:maxSignalLength);
         adjustedPos = position(1:maxSignalLength);
-        adjustedVel = velocity(1:maxSignalLength);
     end
     
-    if G_estCase==GEstCasesEnum.TORQUE_END_AT_ZERO
-        adjustedTorque = [adjustedTorque; zeros(maxSignalLength,1)];
-    else
-        adjustedTorque = [adjustedTorque; ones(maxSignalLength,1)*adjustedTorque(end)];
-    end
+    adjustedTorque = [adjustedTorque; zeros(maxSignalLength,1)];
     adjustedPos = [adjustedPos; ones(maxSignalLength,1)*adjustedPos(end)];
-    adjustedVel = [adjustedVel; zeros(maxSignalLength,1)];
-    
+    adjustedPosRef = ones(length(adjustedPos),1)*referencePosVal;
+    adjustedPosErr = adjustedPosRef-adjustedPos;
+
+    allTrimmedPosErr(i,:) = adjustedPosErr';
     allTrimmedTorque(i,:) = adjustedTorque';
+
+    allTrimmedPosRef(i,:) = adjustedPosRef';
     allTrimmedPos(i,:) = adjustedPos';
-    allTrimmedVel(i,:) = adjustedVel';
-    
+
+
     i = i+1;
-    if G_plot_signals
-        plot(hAx1,torque);
-        plot(hAx2,position);
-        plot(hAx3,velocity);
+    if C_plot_signals
+        plot(hAx1, (ones(length(position),1)*referencePosVal)-position);
+        plot(hAx2, torque);
+    end
+    
+    if W_plot_signals
+        plot(hAx5, ones(length(position),1)*referencePosVal);
+        plot(hAx6, position);
     end
 end
 
@@ -250,77 +258,105 @@ if stdOutlierRemoval
     idcs = flip(find(TF)');
 
     for expId = idcs 
+        allTrimmedPosErr(expId,:) = [];
         allTrimmedTorque(expId,:) = [];
-        allTrimmedPos(expId,:) = [];
+        
+        allTrimmedPosRef(expId,:) = [];
+        allTrimmedPos(expId,:) = [];    
     end
 end
 
 
 % Trim at start, only of align at max is disabled 
 if trimAtStart
+    supPosErr = [];
     supTorque = [];
+    
+    
+    supPosRef = [];
     supPos = [];
-    supVel = [];
 
     for expId=1:1:size(allTrimmedTorque,1)
-        supTorque(expId,:) = allTrimmedTorque(expId, trimStartIndex:end);
+        supPosErr(expId,:) = allTrimmedPosErr(expId, trimStartIndex:end);
+        supTorque(expId,:) =  allTrimmedTorque(expId, trimStartIndex:end);
+        
+        supPosRef(expId,:) = allTrimmedPosRef(expId, trimStartIndex:end);
         supPos(expId,:) =  allTrimmedPos(expId, trimStartIndex:end);
-        supVel(expId,:) =  allTrimmedVel(expId, trimStartIndex:end);
     end
+    allTrimmedPosErr = supPosErr;
     allTrimmedTorque = supTorque;
+    
+    allTrimmedPosRef = supPosRef;
     allTrimmedPos = supPos;
-    allTrimmedVel = supVel;
 
-    clear supTorque supPos supVel;
+    clear supTorque supPos supPosErr supPosRef;
 end
  
-if G_plot_signals 
+if C_plot_signals || W_plot_signals
     for testIdx=1:1:size(allTrimmedTorque,1)
-        plot(hAx4, allTrimmedTorque(testIdx, :));
-        plot(hAx5, allTrimmedPos(testIdx, :));
-        plot(hAx6, allTrimmedVel(testIdx, :));
+        if C_plot_signals
+            plot(hAx3, allTrimmedPosErr(testIdx, :));
+            plot(hAx4, allTrimmedTorque(testIdx, :));
+        end
+        if W_plot_signals
+            plot(hAx7, allTrimmedPosRef(testIdx, :));
+            plot(hAx8, allTrimmedPos(testIdx, :));
+        end
     end
 end
-% clear hAx1 hAx2 hAx3 hAx4 hAx5 hAx6 firstValOfPos firstValOfTorque expId 
-% clear adjustedPos adjustedVel adjustedTorque i pointsToAddStart pointsToAddAtEnd
-% clear torque position velocity
+clear hAx1 hAx2 hAx3 hAx4 hAx5 hAx6 hAx7 hAx8 firstValOfPos firstValOfTorque expId 
+clear adjustedPos adjustedTorque adjustedPosRef adjustedPosErr i pointsToAddStart pointsToAddAtEnd
+clear torque position referencePosVal
 
 % size(allTrimmedPos,1)
 % architecture
 
-% Model Estimation
+%% Model Estimation
 
 clc;
 
 % Number of poles and zeros for the estimated models
+
+% Assuming a PD for the controller estimation
+C_num_zeros = 2;
+C_num_poles = 2;
+
+% The mechanical model is assumed 1/(J*s^2+D*s)
 G_num_zeros = 0;
+G_num_poles = 2;
 
-if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
-    G_num_poles = 1;
-else
-    G_num_poles = 2;
-end
+% The whole model will have the C_num_zeros zeros and 
+% C_num_poles+G_num_poles poles
+W_num_zeros = C_num_zeros;
+W_num_poles = C_num_poles + G_num_poles;
 
-% For each esperiment estimate G, O(n) and construct iddata structures
-G_iddata = {};
-G_sys_est = {};
+
+% For each esperiment estimate the models and construct iddata structures, O(n)
+C_iddata = {};
+C_sys_est = {};
+
+W_iddata = {};
+W_sys_est = {};
 
 % option to force estimated model to be stable
 opt = tfestOptions('EnforceStability',true,'InitialCondition','estimate');
 
 for expIdx=1:1:size(allTrimmedTorque,1)
-    if G_estCase == GEstCasesEnum.TORQUE_VEL_ESTIMATION
-        G_est_iddata = iddata(allTrimmedVel(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
-    else
-        G_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedTorque(expIdx,:)', Ts); 
-    end
-    G_iddata{expIdx} = G_est_iddata;
-    G_sys_est{expIdx} = tfest(G_est_iddata, G_num_poles, G_num_zeros, opt);
+
+    C_est_iddata = iddata(allTrimmedTorque(expIdx,:)', allTrimmedPosErr(expIdx,:)', Ts);
+    C_iddata{expIdx} = C_est_iddata;
+    C_sys_est{expIdx} = tfest(C_est_iddata, C_num_poles, C_num_zeros, opt);
+
+    W_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedPosRef(expIdx,:)', Ts); 
+    W_iddata{expIdx} = W_est_iddata;
+    W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros, opt);    
 end
 
 % initialization of variables for plot function
-G_bestModelOutput = {};
-clear expIdx G_est_iddata opt;
+C_bestModelOutput = {};
+W_bestModelOutput = {};
+
+clear expIdx C_est_iddata W_est_iddata opt;
 
 % Find the best G testing on all experiments, O(n^2)
 %
@@ -328,38 +364,61 @@ clear expIdx G_est_iddata opt;
 % CAREFULL, each bestModelFinder is O(n^2)
 %
 %
-[G_bestModel, G_bestModelFit, G_bestModelOutput] = bestModelFinder(G_sys_est, G_iddata);
+[C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
+
+[W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
 % RESULTS
 clc
-fprintf('\nG: Best model fit from single experiment estimation: %.3f\n', G_bestModelFit);
+fprintf('\nG: C: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
 
+fprintf('\nG: W: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
 
-G_best = zpk(zero(G_bestModel),pole(G_bestModel),1);
-[G_best_num, G_best_den] = tfdata(G_best, 'v');
+% Assumed mechanical model
+s = tf('s');
+J = 0.068;
+D = 0.085; %da 0.1 a 0.001
 
+G_assumed = 1/(J*s^2 + D*s);
 
-switch G_estCase
-    case GEstCasesEnum.NO_TORQUE_EDIT
-        G_resultTable(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
-    case GEstCasesEnum.TORQUE_END_AT_ZERO
-        G_resultTable_zero(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
-    case GEstCasesEnum.TORQUE_VEL_ESTIMATION
-        G_resultTable_vel(architecture, :) = {char(architecture), G_num_zeros, G_num_poles, size(allTrimmedTorque,1), {G_best}, G_bestModelFit, {G_best_num}, {G_best_den}, {pole(G_best)}};
-end
+% Estimated controller from posErr and torque
+C_best =  zpk(C_bestModel);
+[C_best_num, C_best_den] = tfdata(C_best, 'v');
+
+% Extracted controller from estimated W using estimated G
+C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel));
+[C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
+
+C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
+
+W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
 
 % PLOTS
 close all
-imageSavePath = pathToGitFolder + "images\\G_estimation\\";
+imageSavePath = pathToGitFolder + "images\\";
 saveImage = true;
+plotC = true;
+plotW = true;
+betaPath = "allBetas\\";
+CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
 
-switch G_estCase
-    case GEstCasesEnum.NO_TORQUE_EDIT
-        imageSavePath = imageSavePath + "noTorqueEdit\\";
-    case GEstCasesEnum.TORQUE_END_AT_ZERO
-        imageSavePath = imageSavePath + "torqueEndAtZero\\";
-    case GEstCasesEnum.TORQUE_VEL_ESTIMATION
-        imageSavePath = imageSavePath + "torqueVelEstimation\\";
-end
+% Simulink parameters
 
-G_plotFunction(allTrimmedTorque, allTrimmedPos, allTrimmedVel, G_bestModelOutput, saveImage, imageSavePath, architecture, G_estCase )
+% beta parameters for architectures
+beta_pos = 4;
+beta_force = 3;
+beta_force_int = 4;
+beta_adm = 1;
+beta_imp = 1;
+
+% position ctrl parameters
+Kp = 140;
+Kd = 2;
+Ki = 0;
+
+% admittance ctrl parameters
+J_adm = 0.05;
+D_adm = 0.25;
+
+% impedance ctrl parameters
+K_imp = 8;

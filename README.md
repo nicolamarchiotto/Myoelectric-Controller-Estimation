@@ -1,7 +1,8 @@
 # RPC Project
 This repo contains the code for the controller estimation of a study regarding 
 Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
- 
+
+## Purpose 
 **THE GOAL OF THE PROJECT IS TRY TO ESTIMATE A GENERAL CONTROLLER WHICH ADAPTS WELL TO ALL CONTROL ARCHITECTURES USED IN THE STUDY**
 
 List of control architecture and adapters used to collect the data used for the estimation
@@ -20,7 +21,7 @@ ADM         -   MULTICH8
 FORCE_INT   -   MULTICH8      
 ```
 
-The data used in the scripts are defined inside the `myo_tools_testing\testing_version1\settings\logs_eval_gains_2019_10_09_10_18__2020_06_26_30` file
+The data used in the scripts are defined inside the file `myo_tools_testing\testing_version1\settings\logs_eval_gains_2019_10_09_10_18__2020_06_26_30`
 
 Two techniques were used:
 
@@ -44,7 +45,7 @@ To estimate the models, the `tfest` function was exploited
 From each experiment contained in the cleaned set, a model was estimated
 Then every experiment of the cleaned set was used to validate the computed models
 
-## Mechanical Model Estimation - File `G_estimation` 
+## Mechanical Model Estimation - File G_estimation 
 
 We wanted to validate our assumption where G has the following form `1/(J*s^2+d*s)` 
 To estimate G 3 approaches were used, the results of these approaches were saved in the `resultStructures` folder
@@ -64,7 +65,7 @@ To estimate G 3 approaches were used, the results of these approaches were saved
 
 ### C estimation Results
 
-# concat_estimation.m
+## concat_estimation.m
 The script compares different estimation methods, actions performed in this script
 
 * Estimate the controller using a single experiment
@@ -89,7 +90,7 @@ G assumed to be of the following form 1/(Js^2+ds)
 
 The estimation from the single experiment was choosen to advance in the project
 
-# main.m
+## main.m
 Script were main work for estimation was performed, actions performed in this script
 
 * The experiments were extracted from logs_eval_gains_2019_10_09_10_18__2020_06_26_30, session containing multiple sessions of experiments
@@ -103,7 +104,7 @@ Script were main work for estimation was performed, actions performed in this sc
 
 * The best Controller and the controller extracted from W were tested on the simulink architectures
 
-# External resources and important guidelines
+## External resources and important guidelines
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
 
 N.B. This repository is not working by itself but it requires the myo_tools_testing
