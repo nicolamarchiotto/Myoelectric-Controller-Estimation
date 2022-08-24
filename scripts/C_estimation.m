@@ -10,7 +10,7 @@ close all
 actualFixedDataTableExpanded = fixedDataLongTableExpanded;
 
 pathToGitFolder = 'C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\';
-%%
+
 clearvars -except exoRefSplineCells actualFixedDataTableExpanded pathToGitFolder
 
 
@@ -26,16 +26,19 @@ W_varNames = {'Architecture', '# zeros', '# poles', '# est exps', 'W model', 'W 
 
 C_resultTable = table('Size', C_sz, 'VariableTypes', C_varTypes, 'VariableNames', C_varNames);
 W_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
+W2_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
 
 clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz
 
 %% SAVE G RESULT TABLE - To store results of experiments up to now
 save(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 save(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
+save(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
 
 %% LOAD G RESULT TABLE - If already defined system
 load(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 load(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
+load(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
 
 
 %
@@ -306,11 +309,11 @@ if C_plot_signals || W_plot_signals
 end
 clear hAx1 hAx2 hAx3 hAx4 hAx5 hAx6 hAx7 hAx8 firstValOfPos firstValOfTorque expId 
 clear adjustedPos adjustedTorque adjustedPosRef adjustedPosErr i pointsToAddStart pointsToAddAtEnd
-clear torque position referencePosVal
+clear torque position referencePosVal lastValOfPos lastValOfTorque
 
 % size(allTrimmedPos,1)
 % architecture
-
+close all
 %% Model Estimation
 
 clc;
@@ -318,8 +321,8 @@ clc;
 % Number of poles and zeros for the estimated models
 
 % Assuming a PD for the controller estimation
-C_num_zeros = 2;
-C_num_poles = 2;
+C_num_zeros = 1;
+C_num_poles = 1;
 
 % The mechanical model is assumed 1/(J*s^2+D*s)
 G_num_zeros = 0;
@@ -330,6 +333,8 @@ G_num_poles = 2;
 W_num_zeros = C_num_zeros;
 W_num_poles = C_num_poles + G_num_poles;
 
+W2_num_zeros = 0;
+W2_num_poles = 2;
 
 % For each esperiment estimate the models and construct iddata structures, O(n)
 C_iddata = {};
@@ -338,6 +343,8 @@ C_sys_est = {};
 W_iddata = {};
 W_sys_est = {};
 
+W2_sys_est = {};
+  
 % option to force estimated model to be stable
 opt = tfestOptions('EnforceStability',true,'InitialCondition','estimate');
 
@@ -350,11 +357,15 @@ for expIdx=1:1:size(allTrimmedTorque,1)
     W_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedPosRef(expIdx,:)', Ts); 
     W_iddata{expIdx} = W_est_iddata;
     W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros, opt);    
+
+    W2_sys_est{expIdx} = tfest(W_est_iddata, W2_num_poles, W2_num_zeros, opt);    
+
 end
 
 % initialization of variables for plot function
 C_bestModelOutput = {};
 W_bestModelOutput = {};
+W2_bestModelOutput = {};
 
 clear expIdx C_est_iddata W_est_iddata opt;
 
@@ -368,11 +379,15 @@ clear expIdx C_est_iddata W_est_iddata opt;
 
 [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
+[W2_bestModel, W2_bestModelFit, W2_bestModelOutput] = bestModelFinder(W2_sys_est, W_iddata);
+
 % RESULTS
 clc
-fprintf('\nG: C: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
+fprintf('\nC: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
 
-fprintf('\nG: W: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
+fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
+
+fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W2_bestModelFit);
 
 % Assumed mechanical model
 s = tf('s');
@@ -389,27 +404,35 @@ C_best =  zpk(C_bestModel);
 C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel));
 [C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
 
+C_from_W2best = zpk(getC_from_G_and_W(G_assumed, W2_bestModel));
+[C_from_W2best_num, C_from_W2best_den] = tfdata(C_from_W2best, 'v');
+
 C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
 
 W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
 
-% PLOTS
+W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
+
+%% PLOTS
 close all
 imageSavePath = pathToGitFolder + "images\\";
-saveImage = true;
-plotC = true;
+saveImage = false;
+plotC = false;
 plotW = true;
 betaPath = "allBetas\\";
 CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
 
-% Simulink parameters
+%% Simulink parameters
+
+% saturation position parameter
+posLim = 2;
 
 % beta parameters for architectures
 beta_pos = 4;
 beta_force = 3;
-beta_force_int = 4;
-beta_adm = 1;
-beta_imp = 1;
+beta_force_int = 2;
+beta_adm = 0.2;
+beta_imp = 4 ;
 
 % position ctrl parameters
 Kp = 140;
