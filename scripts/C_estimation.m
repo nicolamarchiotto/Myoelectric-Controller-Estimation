@@ -6,8 +6,14 @@ addpath(genpath('..\\myo_tools_testing'))
 logs_eval_gains_2019_10_09_10_18__2020_06_26_30 %inside testing1\settings folder
 batchMultProcessingTest1
 batchMultElaborationTest1Long
-close all
 actualFixedDataTableExpanded = fixedDataLongTableExpanded;
+
+% logs_eval_2019_09_06 %inside settings folder
+% batchProcessingTest1
+% batchElaborationTest1
+% actualFixedDataTableExpanded = fixedDataTableExpanded;
+
+close all
 
 pathToGitFolder = 'C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\';
 
@@ -126,7 +132,7 @@ maxSignalLength = 400;
 % SET G ESTIMATION TECHNIQUE
 
 C_plot_signals = true;
-W_plot_signals = true;
+W_plot_signals = false;
 
 % Outliers data filtering based on standard deviation
 % Remove outliers of a vector where an outlier is defined as a point more 
@@ -313,8 +319,8 @@ clear torque position referencePosVal lastValOfPos lastValOfTorque
 
 % size(allTrimmedPos,1)
 % architecture
-close all
-%% Model Estimation
+ close all
+% Model Estimation
 
 clc;
 
@@ -324,17 +330,36 @@ clc;
 C_num_zeros = 1;
 C_num_poles = 1;
 
-% The mechanical model is assumed 1/(J*s^2+D*s)
-G_num_zeros = 0;
-G_num_poles = 2;
+% The mechanical model G is assumed 1/(J*s^2+D*s)
 
-% The whole model will have the C_num_zeros zeros and 
-% C_num_poles+G_num_poles poles
-W_num_zeros = C_num_zeros;
-W_num_poles = C_num_poles + G_num_poles;
-
-W2_num_zeros = 0;
-W2_num_poles = 2;
+switch architecture
+    case ArchitectureEnum.COMP_NONE
+        W_num_zeros = 1;
+        W_num_poles = 3;
+        
+        % estimation of the whole model assuming a second order system
+        W2_num_zeros = 0;
+        W2_num_poles = 2;
+    case ArchitectureEnum.FORCE_PLAIN_P || ArchitectureEnum.FORCE_MULTICH8
+        W_num_zeros = 1;
+        W_num_poles = 3;
+        
+    case ArchitectureEnum.POS_V_PLAIN_P || ArchitectureEnum.POS_V_MULTICH8
+        W_num_zeros = 2;
+        W_num_poles = 5;
+        
+    case ArchitectureEnum.FIX_IMP_PLAIN_P || ArchitectureEnum.FIX_IMP_MULTICH8
+        W_num_zeros = 1;
+        W_num_poles = 4;
+        
+    case ArchitectureEnum.ADM_PLAIN_P || ArchitectureEnum.ADM_MULTICH8
+        W_num_zeros = 2;
+        W_num_poles = 6;
+        
+    case ArchitectureEnum.FORCE_INT_PLAIN_P || ArchitectureEnum.FORCE_INT_MULTICH8
+        W_num_zeros = 1;
+        W_num_poles = 4;
+end
 
 % For each esperiment estimate the models and construct iddata structures, O(n)
 C_iddata = {};
@@ -379,52 +404,23 @@ clear expIdx C_est_iddata W_est_iddata opt;
 
 [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
 
-[W2_bestModel, W2_bestModelFit, W2_bestModelOutput] = bestModelFinder(W2_sys_est, W_iddata);
+if architecture == ArchitectureEnum.COMP_NONE
+    [W2_bestModel, W2_bestModelFit, W2_bestModelOutput] = bestModelFinder(W2_sys_est, W_iddata);
+    fprintf('\nW2 Best model fit, assuming W as a second order system: %.3f\n', W2_bestModelFit);
+end
 
 % RESULTS
 clc
-fprintf('\nC: Best model fit from single experiment estimation: %.3f\n', C_bestModelFit);
+fprintf('\nC best model fit: %.3f\n', C_bestModelFit);
 
-fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W_bestModelFit);
-
-fprintf('\nW: Best model fit from single experiment estimation: %.3f\n', W2_bestModelFit);
+fprintf('\nW best model fit: %.3f\n', W_bestModelFit);
 
 % Assumed mechanical model
 s = tf('s');
 J = 0.068;
 D = 0.085; %da 0.1 a 0.001
 
-G_assumed = 1/(J*s^2 + D*s);
-
-% Estimated controller from posErr and torque
-C_best =  zpk(C_bestModel);
-[C_best_num, C_best_den] = tfdata(C_best, 'v');
-
-% Extracted controller from estimated W using estimated G
-C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel));
-[C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
-
-C_from_W2best = zpk(getC_from_G_and_W(G_assumed, W2_bestModel));
-[C_from_W2best_num, C_from_W2best_den] = tfdata(C_from_W2best, 'v');
-
-C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
-
-W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
-
-W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
-
-%% PLOTS
-close all
-imageSavePath = pathToGitFolder + "images\\";
-saveImage = false;
-plotC = false;
-plotW = true;
-betaPath = "allBetas\\";
-CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
-
-%% Simulink parameters
-
-% saturation position parameter
+% saturation position parameter for simulink
 posLim = 2;
 
 % beta parameters for architectures
@@ -432,12 +428,14 @@ beta_pos = 4;
 beta_force = 3;
 beta_force_int = 2;
 beta_adm = 0.2;
-beta_imp = 4 ;
+beta_imp = 4;
 
 % position ctrl parameters
-Kp = 140;
-Kd = 2;
-Ki = 0;
+Kp_pos = 140;
+Kd_pos = 2;
+Ki_pos = 0;
+% pole to make the pos ctrl fisible
+posPole = 1000;
 
 % admittance ctrl parameters
 J_adm = 0.05;
@@ -445,3 +443,35 @@ D_adm = 0.25;
 
 % impedance ctrl parameters
 K_imp = 8;
+
+G_assumed = 1/(J*s^2 + D*s);
+
+%% Estimated controller from posErr and torque
+clc
+C_best =  zpk(C_bestModel)
+[C_best_num, C_best_den] = tfdata(C_best, 'v');
+
+% Extracted controller from estimated W using estimated G
+zpk(W_bestModel)
+C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp))
+[C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
+%%
+if architecture == ArchitectureEnum.COMP_NONE
+    C_from_W2best = zpk(getC_from_G_and_W(G_assumed, W2_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
+    [C_from_W2best_num, C_from_W2best_den] = tfdata(C_from_W2best, 'v');
+    W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
+end
+
+C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
+
+W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
+
+% PLOTS
+close all
+imageSavePath = pathToGitFolder + "images\\";
+saveImage = true;
+plotC = true;
+plotW = true;
+betaPath = "allBetas\\";
+CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
+close all
