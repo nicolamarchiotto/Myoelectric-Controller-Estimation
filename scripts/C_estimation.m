@@ -23,29 +23,34 @@ clearvars -except exoRefSplineCells actualFixedDataTableExpanded pathToGitFolder
 %% DEFINITION OF G RESULT TABLE
 C_sz = [1 9];
 W_sz = [1 10];
+C_freq_sz = [1 8];
 
 C_varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell'};
 C_varNames = {'Architecture', '# zeros', '# poles', '# est exps', 'C model', 'C fit', 'C num', 'C den', 'C poles, (s+p)'};
+C_freq_varTypes = {'char', 'double', 'double', 'cell', 'cell', 'cell', 'cell', 'cell'};
 
 W_varTypes = {'char', 'double', 'double', 'double', 'cell', 'double', 'cell', 'cell', 'cell', 'cell'};
 W_varNames = {'Architecture', '# zeros', '# poles', '# est exps', 'W model', 'W fit', 'C model', 'C num', 'C den', 'C poles, (s+p)'};
+C_freq_varNames = {'Architecture', '# zeros', '# poles', 'C model', 'C num', 'C den', 'C zeros, (s+z)','C poles, (s+p)'};
 
 C_resultTable = table('Size', C_sz, 'VariableTypes', C_varTypes, 'VariableNames', C_varNames);
 W_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
 W2_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
+C_freq_resultTable = table('Size', C_freq_sz, 'VariableTypes', C_freq_varTypes, 'VariableNames', C_freq_varNames);
 
-clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz
+clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz C_freq_varTypes C_freq_varNames C_freq_sz
 
 %% SAVE G RESULT TABLE - To store results of experiments up to now
 save(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 save(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
 save(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
+save(pathToGitFolder + "resultStructures\\C_freq_resultTable.mat", 'C_freq_resultTable')
 
 %% LOAD G RESULT TABLE - If already defined system
 load(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 load(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
 load(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
-
+load(pathToGitFolder + "resultStructures\\C_freq_resultTable.mat", 'C_freq_resultTable')
 
 %
 %
@@ -421,7 +426,7 @@ J = 0.068;
 D = 0.085; %da 0.1 a 0.001
 
 % saturation position parameter for simulink
-posLim = 2;
+posLim = 3;
 
 % beta parameters for architectures
 beta_pos = 4;
@@ -446,25 +451,64 @@ K_imp = 8;
 
 G_assumed = 1/(J*s^2 + D*s);
 
-%% Estimated controller from posErr and torque
+%
+%
+% Estimated controller from posErr and torque
+%
+%
+
 clc
-C_best =  zpk(C_bestModel)
+C_best =  zpk(C_bestModel);
 [C_best_num, C_best_den] = tfdata(C_best, 'v');
 
 % Extracted controller from estimated W using estimated G
-zpk(W_bestModel)
-C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp))
+zpk(W_bestModel);
+C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
 [C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
-%%
+
+%
+%
+% Fourier transform estimation
+%
+%
+
+C_from_Wbest_no_minreal = tf(getC_from_G_and_W_no_minreal(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
+
+N = 10;
+t = 0:Ts:N-1;
+
+% sweep signal with decreasing amplitude
+
+f0=1;
+f1=500;
+
+sweep = exp(-t).*sin(pi*(f0*t + ((f1 - f0)*t.^2)/2*Ts));
+[y,l] = lsim(C_from_Wbest_no_minreal, sweep, t);
+
+% figure
+% plot(t,x,t,y)
+% legend('x', 'y')
+
+% Use fft and ifft to transform existing iddata objects to and from the time and frequency domains.
+% https://it.mathworks.com/help/ident/ref/iddata.html
+F_iddata = fft(iddata(y, sweep', Ts));
+% figure 
+% plot(F_iddata)
+C_freq_est = tfest(F_iddata, 1, 1);
+[C_freq_num, C_freq_den] = tfdata(zpk(C_freq_est), 'v');
+
+
+C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
+
+W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
+
+C_freq_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, {zpk(C_freq_est)}, {C_freq_num}, {C_freq_den}, {zero(C_freq_est)}, {pole(C_freq_est)}};
+
 if architecture == ArchitectureEnum.COMP_NONE
     C_from_W2best = zpk(getC_from_G_and_W(G_assumed, W2_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
     [C_from_W2best_num, C_from_W2best_den] = tfdata(C_from_W2best, 'v');
     W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
 end
-
-C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
-
-W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
 
 % PLOTS
 close all
@@ -475,3 +519,12 @@ plotW = true;
 betaPath = "allBetas\\";
 CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
 close all
+
+%%
+clc
+close all
+sim_imageSavePath = pathToGitFolder + "images\\simulink_responses\\";
+sim_saveImage = true;
+sim_betaPath = "allBetas\\";
+
+simulink_plot_function(sim_saveImage, sim_imageSavePath, architecture, sim_betaPath, out)
