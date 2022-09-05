@@ -134,9 +134,7 @@ torqueEndEpsilon = 0.2;
 
 maxSignalLength = 400;
 
-% SET G ESTIMATION TECHNIQUE
-
-C_plot_signals = true;
+C_plot_signals = false;
 W_plot_signals = false;
 
 % Outliers data filtering based on standard deviation
@@ -267,6 +265,7 @@ end
 % STANDARD DEVIATION OUTLIER REMOVAL
 % Remove outliers of a vector where an outlier is defined as a point more 
 % than three standard deviations from the mean of the data.
+
 if stdOutlierRemoval
     [B,TF]=rmoutliers(allTrimmedTorque,'mean');
     idcs = flip(find(TF)');
@@ -337,7 +336,10 @@ C_num_poles = 1;
 
 % The mechanical model G is assumed 1/(J*s^2+D*s)
 
+C_from_W2best=1;
+
 switch architecture
+        %GRAV COMP
     case ArchitectureEnum.COMP_NONE
         W_num_zeros = 1;
         W_num_poles = 3;
@@ -345,23 +347,45 @@ switch architecture
         % estimation of the whole model assuming a second order system
         W2_num_zeros = 0;
         W2_num_poles = 2;
-    case ArchitectureEnum.FORCE_PLAIN_P || ArchitectureEnum.FORCE_MULTICH8
+
+        % FORCE
+    case ArchitectureEnum.FORCE_PLAIN_P 
         W_num_zeros = 1;
         W_num_poles = 3;
-        
-    case ArchitectureEnum.POS_V_PLAIN_P || ArchitectureEnum.POS_V_MULTICH8
+    case ArchitectureEnum.FORCE_MULTICH8
+        W_num_zeros = 1;
+        W_num_poles = 3;
+    
+        %POS_V
+    case ArchitectureEnum.POS_V_PLAIN_P 
         W_num_zeros = 2;
         W_num_poles = 5;
-        
-    case ArchitectureEnum.FIX_IMP_PLAIN_P || ArchitectureEnum.FIX_IMP_MULTICH8
+    case ArchitectureEnum.POS_V_MULTICH8
+        W_num_zeros = 2;
+        W_num_poles = 5;
+    
+        % IMP
+    case ArchitectureEnum.FIX_IMP_PLAIN_P
+        W_num_zeros = 1;
+        W_num_poles = 4;
+    case ArchitectureEnum.FIX_IMP_MULTICH8
         W_num_zeros = 1;
         W_num_poles = 4;
         
-    case ArchitectureEnum.ADM_PLAIN_P || ArchitectureEnum.ADM_MULTICH8
+        
+        % ADM
+    case ArchitectureEnum.ADM_PLAIN_P 
         W_num_zeros = 2;
         W_num_poles = 6;
-        
-    case ArchitectureEnum.FORCE_INT_PLAIN_P || ArchitectureEnum.FORCE_INT_MULTICH8
+    case ArchitectureEnum.ADM_MULTICH8
+        W_num_zeros = 2;
+        W_num_poles = 6;
+    
+        % FORCE INT
+    case ArchitectureEnum.FORCE_INT_PLAIN_P 
+        W_num_zeros = 1;
+        W_num_poles = 4;
+    case ArchitectureEnum.FORCE_INT_MULTICH8
         W_num_zeros = 1;
         W_num_poles = 4;
 end
@@ -388,8 +412,9 @@ for expIdx=1:1:size(allTrimmedTorque,1)
     W_iddata{expIdx} = W_est_iddata;
     W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros, opt);    
 
-    W2_sys_est{expIdx} = tfest(W_est_iddata, W2_num_poles, W2_num_zeros, opt);    
-
+    if architecture == ArchitectureEnum.COMP_NONE
+        W2_sys_est{expIdx} = tfest(W_est_iddata, W2_num_poles, W2_num_zeros, opt);
+    end
 end
 
 % initialization of variables for plot function
@@ -420,7 +445,7 @@ fprintf('\nC best model fit: %.3f\n', C_bestModelFit);
 
 fprintf('\nW best model fit: %.3f\n', W_bestModelFit);
 
-% Assumed mechanical model
+%% Assumed mechanical model
 s = tf('s');
 J = 0.068;
 D = 0.085; %da 0.1 a 0.001
@@ -449,19 +474,23 @@ D_adm = 0.25;
 % impedance ctrl parameters
 K_imp = 8;
 
-G_assumed = 1/(J*s^2 + D*s);
-
+G_assumed = 1/(J*s^2 + D*s)
+%%
 %
 %
 % Estimated controller from posErr and torque
 %
 %
 
-clc
 C_best =  zpk(C_bestModel);
 [C_best_num, C_best_den] = tfdata(C_best, 'v');
 
+%
+%
 % Extracted controller from estimated W using estimated G
+%
+%
+
 zpk(W_bestModel);
 C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
 [C_from_Wbest_num, C_from_Wbest_den] = tfdata(C_from_Wbest, 'v');
@@ -486,7 +515,7 @@ sweep = exp(-t).*sin(pi*(f0*t + ((f1 - f0)*t.^2)/2*Ts));
 [y,l] = lsim(C_from_Wbest_no_minreal, sweep, t);
 
 % figure
-% plot(t,x,t,y)
+% plot(t, x, t, y)
 % legend('x', 'y')
 
 % Use fft and ifft to transform existing iddata objects to and from the time and frequency domains.
@@ -510,7 +539,7 @@ if architecture == ArchitectureEnum.COMP_NONE
     W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
 end
 
-% PLOTS
+% Testing signals plots
 close all
 imageSavePath = pathToGitFolder + "images\\";
 saveImage = true;
@@ -520,11 +549,84 @@ betaPath = "allBetas\\";
 CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
 close all
 
-%%
+%% Simulink responses
 clc
 close all
 sim_imageSavePath = pathToGitFolder + "images\\simulink_responses\\";
-sim_saveImage = true;
+sim_saveImage = true;   
 sim_betaPath = "allBetas\\";
 
 simulink_plot_function(sim_saveImage, sim_imageSavePath, architecture, sim_betaPath, out)
+
+%% Data visualization
+%% model from W2_resultTable
+clc
+arch = ArchitectureEnum.COMP_NONE
+
+% W model
+W2_model = W2_resultTable{arch,5}{1}
+% C from W
+C_fromW2 = W2_resultTable{arch,7}{1}
+% numerator
+num = W2_resultTable{arch,8}{1};
+% denominator
+den = W2_resultTable{arch,9}{1};
+% poles
+poles = W2_resultTable{arch,10};
+
+%% model from C_resultTable
+
+clc
+arch = ArchitectureEnum.COMP_NONE
+
+% C model
+C_model = C_resultTable{arch,5}{1}
+% numerator
+num = C_resultTable{arch,7}{1};
+% denominator
+den = C_resultTable{arch,8}{1};
+% poles
+poles = C_resultTable{arch,9}{1};
+
+%% model from W_resultTable
+clc
+arch = ArchitectureEnum.COMP_NONE
+
+% W model
+W_model = W_resultTable{arch,5}{1}
+% C from W
+C_fromW = W_resultTable{arch,7}{1};
+% numerator
+num = W_resultTable{arch,8}{1};
+% denominator
+den = W_resultTable{arch,9}{1};
+% poles
+poles = W_resultTable{arch,10}{1};
+
+
+%% model from C_freq_resultTable
+clc
+arch = ArchitectureEnum.COMP_NONE
+
+C_freq_model = C_freq_resultTable{arch,4}{1}
+% numerator
+num = C_freq_resultTable{arch,5}{1};
+% denominator
+den = C_freq_resultTable{arch,6}{1};
+% zeros
+zeros = C_freq_resultTable{arch,7}{1};
+% poles
+poles = C_freq_resultTable{arch,8}{1};
+
+%%
+
+%% model from W_resultTable
+clc
+arch = ArchitectureEnum.ADM_MULTICH8
+% C from W
+C_fromW = W_resultTable{arch,7}{1}
+
+C_freq_model = C_freq_resultTable{arch,4}{1}
+
+
+

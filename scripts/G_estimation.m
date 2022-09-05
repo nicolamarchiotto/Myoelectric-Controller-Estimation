@@ -31,6 +31,7 @@ save(pathToGitFolder + "resultStructures\\G_resultTable_zero.mat", 'G_resultTabl
 save(pathToGitFolder + "resultStructures\\G_resultTable_vel.mat", 'G_resultTable_vel')
 
 %% LOAD G RESULT TABLE - If already defined system
+clc
 load(pathToGitFolder + "resultStructures\\G_resultTable.mat", 'G_resultTable')
 load(pathToGitFolder + "resultStructures\\G_resultTable_zero.mat", 'G_resultTable_zero')
 load(pathToGitFolder + "resultStructures\\G_resultTable_vel.mat", 'G_resultTable_vel')
