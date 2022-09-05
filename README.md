@@ -25,7 +25,8 @@ The data used in the scripts are defined inside the file `myo_tools_testing\test
 
 The repository also contains code for the mechanical part G estimation
 
-Full documentation here [a relative link](https://github.com/nicolamarchiotto/RPC-Project.git/master/docs/Documentation.pdf)
+Full documentation here 
+A minimal report is provided in [Documentation](./docs/Documentation.pdf)
 
 ## External resources and important guidelines
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
