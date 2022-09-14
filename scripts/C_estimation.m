@@ -35,7 +35,6 @@ C_freq_varNames = {'Architecture', '# zeros', '# poles', 'C model', 'C num', 'C 
 
 C_resultTable = table('Size', C_sz, 'VariableTypes', C_varTypes, 'VariableNames', C_varNames);
 W_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
-W2_resultTable = table('Size', W_sz, 'VariableTypes', W_varTypes, 'VariableNames', W_varNames);
 C_freq_resultTable = table('Size', C_freq_sz, 'VariableTypes', C_freq_varTypes, 'VariableNames', C_freq_varNames);
 
 clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz C_freq_varTypes C_freq_varNames C_freq_sz
@@ -43,13 +42,13 @@ clear C_varTypes C_varNames C_sz W_varTypes W_varNames W_sz C_freq_varTypes C_fr
 %% SAVE G RESULT TABLE - To store results of experiments up to now
 save(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 save(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
-save(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
 save(pathToGitFolder + "resultStructures\\C_freq_resultTable.mat", 'C_freq_resultTable')
 
 %% LOAD G RESULT TABLE - If already defined system
+pathToGitFolder = 'C:\\Users\\nicol\\Desktop\\rpcProject\\myo_tools_testing\\RPC_MN_project\\';
+
 load(pathToGitFolder + "resultStructures\\C_resultTable.mat", 'C_resultTable')
 load(pathToGitFolder + "resultStructures\\W_resultTable.mat", 'W_resultTable')
-load(pathToGitFolder + "resultStructures\\W2_resultTable.mat", 'W2_resultTable')
 load(pathToGitFolder + "resultStructures\\C_freq_resultTable.mat", 'C_freq_resultTable')
 
 %
@@ -134,8 +133,8 @@ torqueEndEpsilon = 0.2;
 
 maxSignalLength = 400;
 
-C_plot_signals = false;
-W_plot_signals = false;
+C_plot_signals = true;
+W_plot_signals = true;
 
 % Outliers data filtering based on standard deviation
 % Remove outliers of a vector where an outlier is defined as a point more 
@@ -158,16 +157,25 @@ if C_plot_signals
     figure; 
     hAx1 = subplot(2,1,1);   
     title('Position error of the experiments') 
+    xlabel('time [cs]');
+    ylabel('position [rad]');
+    
     hAx2 = subplot(2,1,2);
     title('Torque output of experiments')
+    xlabel('time [cs]');
+    ylabel('position [rad]');
     
     figure; 
     hAx3 = subplot(2,1,1);    
     title('FILT: Position error of the experiments')
+    xlabel('time [cs]');
+    ylabel('position [rad]');
+    
     hAx4 = subplot(2,1,2);
     title('FILT: Torque output of experiments')
-    
-    
+    xlabel('time [cs]');
+    ylabel('position [rad]');
+   
     axes(hAx1)
     hold on
     axes(hAx2)
@@ -182,14 +190,24 @@ if W_plot_signals
     figure; 
     hAx5 = subplot(2,1,1);   
     title('Reference position of the experiments') 
+    xlabel('time [cs]');
+    ylabel('position [rad]');
+    
     hAx6 = subplot(2,1,2);
     title('Position output of experiments')
+    xlabel('time [cs]');
+    ylabel('position [rad]');
     
     figure; 
     hAx7 = subplot(2,1,1);    
     title('FILT: Reference position of the experiments')
+    xlabel('time [cs]');
+    ylabel('position [rad]');
+    
     hAx8 = subplot(2,1,2);
     title('FILT: Position output of experiments')
+    xlabel('time [cs]');
+    ylabel('position [rad]');
     
     axes(hAx5)
     hold on
@@ -249,8 +267,8 @@ for expId = selected_indeces  %for each experiment
     allTrimmedPosRef(i,:) = adjustedPosRef';
     allTrimmedPos(i,:) = adjustedPos';
 
-
     i = i+1;
+    
     if C_plot_signals
         plot(hAx1, (ones(length(position),1)*referencePosVal)-position);
         plot(hAx2, torque);
@@ -323,8 +341,8 @@ clear torque position referencePosVal lastValOfPos lastValOfTorque
 
 % size(allTrimmedPos,1)
 % architecture
- close all
-% Model Estimation
+%  close all
+%% Model Estimation
 
 clc;
 
@@ -336,7 +354,6 @@ C_num_poles = 1;
 
 % The mechanical model G is assumed 1/(J*s^2+D*s)
 
-C_from_W2best=1;
 
 switch architecture
         %GRAV COMP
@@ -344,10 +361,6 @@ switch architecture
         W_num_zeros = 1;
         W_num_poles = 3;
         
-        % estimation of the whole model assuming a second order system
-        W2_num_zeros = 0;
-        W2_num_poles = 2;
-
         % FORCE
     case ArchitectureEnum.FORCE_PLAIN_P 
         W_num_zeros = 1;
@@ -397,8 +410,6 @@ C_sys_est = {};
 W_iddata = {};
 W_sys_est = {};
 
-W2_sys_est = {};
-  
 % option to force estimated model to be stable
 opt = tfestOptions('EnforceStability',true,'InitialCondition','estimate');
 
@@ -411,20 +422,15 @@ for expIdx=1:1:size(allTrimmedTorque,1)
     W_est_iddata = iddata(allTrimmedPos(expIdx,:)', allTrimmedPosRef(expIdx,:)', Ts); 
     W_iddata{expIdx} = W_est_iddata;
     W_sys_est{expIdx} = tfest(W_est_iddata, W_num_poles, W_num_zeros, opt);    
-
-    if architecture == ArchitectureEnum.COMP_NONE
-        W2_sys_est{expIdx} = tfest(W_est_iddata, W2_num_poles, W2_num_zeros, opt);
-    end
 end
 
 % initialization of variables for plot function
 C_bestModelOutput = {};
 W_bestModelOutput = {};
-W2_bestModelOutput = {};
 
 clear expIdx C_est_iddata W_est_iddata opt;
 
-% Find the best G testing on all experiments, O(n^2)
+%% Find the best G testing on all experiments, O(n^2)
 %
 %
 % CAREFULL, each bestModelFinder is O(n^2)
@@ -433,11 +439,6 @@ clear expIdx C_est_iddata W_est_iddata opt;
 [C_bestModel, C_bestModelFit, C_bestModelOutput] = bestModelFinder(C_sys_est, C_iddata);
 
 [W_bestModel, W_bestModelFit, W_bestModelOutput] = bestModelFinder(W_sys_est, W_iddata);
-
-if architecture == ArchitectureEnum.COMP_NONE
-    [W2_bestModel, W2_bestModelFit, W2_bestModelOutput] = bestModelFinder(W2_sys_est, W_iddata);
-    fprintf('\nW2 Best model fit, assuming W as a second order system: %.3f\n', W2_bestModelFit);
-end
 
 % RESULTS
 clc
@@ -506,17 +507,16 @@ C_from_Wbest_no_minreal = tf(getC_from_G_and_W_no_minreal(G_assumed, W_bestModel
 N = 10;
 t = 0:Ts:N-1;
 
-% sweep signal with decreasing amplitude
-
+%%
 f0=1;
-f1=500;
+f1=10;
 
 sweep = exp(-t).*sin(pi*(f0*t + ((f1 - f0)*t.^2)/2*Ts));
 [y,l] = lsim(C_from_Wbest_no_minreal, sweep, t);
 
 % figure
-% plot(t, x, t, y)
-% legend('x', 'y')
+% plot(t, sweep, t, y)
+% legend('sweep', 'y')
 
 % Use fft and ifft to transform existing iddata objects to and from the time and frequency domains.
 % https://it.mathworks.com/help/ident/ref/iddata.html
@@ -526,18 +526,12 @@ F_iddata = fft(iddata(y, sweep', Ts));
 C_freq_est = tfest(F_iddata, 1, 1);
 [C_freq_num, C_freq_den] = tfdata(zpk(C_freq_est), 'v');
 
-
+%%
 C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
 
 W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
 
 C_freq_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, {zpk(C_freq_est)}, {C_freq_num}, {C_freq_den}, {zero(C_freq_est)}, {pole(C_freq_est)}};
-
-if architecture == ArchitectureEnum.COMP_NONE
-    C_from_W2best = zpk(getC_from_G_and_W(G_assumed, W2_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
-    [C_from_W2best_num, C_from_W2best_den] = tfdata(C_from_W2best, 'v');
-    W2_resultTable(architecture, :) = {char(architecture), W2_num_zeros, W2_num_poles, size(allTrimmedTorque,1), {zpk(W2_bestModel)}, W2_bestModelFit, {C_from_W2best}, {C_from_W2best_num}, {C_from_W2best_den}, {pole(C_from_W2best)}};
-end
 
 % Testing signals plots
 close all
@@ -553,80 +547,20 @@ close all
 clc
 close all
 sim_imageSavePath = pathToGitFolder + "images\\simulink_responses\\";
-sim_saveImage = true;   
+sim_saveImage = false;   
 sim_betaPath = "allBetas\\";
 
+% Ts = 0.01;
+% DimValues = 1;
+% 
+% DataPositions = W_iddata{1}.InputData;
+% TimeValues=0 : Ts : Ts*(length(DataPositions)-1);
+% 
+% step_exp.time=TimeValues';
+% step_exp.signals.values = DataPositions;
+% step_exp.signals.dimensions = DimValues;
+% sim('myo_model_architectures');
+
 simulink_plot_function(sim_saveImage, sim_imageSavePath, architecture, sim_betaPath, out)
-
-%% Data visualization
-%% model from W2_resultTable
-clc
-arch = ArchitectureEnum.COMP_NONE
-
-% W model
-W2_model = W2_resultTable{arch,5}{1}
-% C from W
-C_fromW2 = W2_resultTable{arch,7}{1}
-% numerator
-num = W2_resultTable{arch,8}{1};
-% denominator
-den = W2_resultTable{arch,9}{1};
-% poles
-poles = W2_resultTable{arch,10};
-
-%% model from C_resultTable
-
-clc
-arch = ArchitectureEnum.COMP_NONE
-
-% C model
-C_model = C_resultTable{arch,5}{1}
-% numerator
-num = C_resultTable{arch,7}{1};
-% denominator
-den = C_resultTable{arch,8}{1};
-% poles
-poles = C_resultTable{arch,9}{1};
-
-%% model from W_resultTable
-clc
-arch = ArchitectureEnum.COMP_NONE
-
-% W model
-W_model = W_resultTable{arch,5}{1}
-% C from W
-C_fromW = W_resultTable{arch,7}{1};
-% numerator
-num = W_resultTable{arch,8}{1};
-% denominator
-den = W_resultTable{arch,9}{1};
-% poles
-poles = W_resultTable{arch,10}{1};
-
-
-%% model from C_freq_resultTable
-clc
-arch = ArchitectureEnum.COMP_NONE
-
-C_freq_model = C_freq_resultTable{arch,4}{1}
-% numerator
-num = C_freq_resultTable{arch,5}{1};
-% denominator
-den = C_freq_resultTable{arch,6}{1};
-% zeros
-zeros = C_freq_resultTable{arch,7}{1};
-% poles
-poles = C_freq_resultTable{arch,8}{1};
-
-%%
-
-%% model from W_resultTable
-clc
-arch = ArchitectureEnum.ADM_MULTICH8
-% C from W
-C_fromW = W_resultTable{arch,7}{1}
-
-C_freq_model = C_freq_resultTable{arch,4}{1}
-
 
 

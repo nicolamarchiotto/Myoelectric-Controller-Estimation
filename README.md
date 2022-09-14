@@ -25,17 +25,16 @@ The data used in the scripts are defined inside the file `myo_tools_testing\test
 
 The repository also contains code for the mechanical part G estimation
 
-Full documentation here 
-A minimal report is provided in [Documentation](./docs/Documentation.pdf)
+Full documentation here [Documentation](./docs/Documentation.pdf)
 
 ## External resources and important guidelines
 Davide Constanzi's PhD Thesis: https://iris.univr.it/handle/11562/1061781
 
 N.B. This repository is not working by itself but it requires the myo_tools_testing
-repository and  myo_interface log data, the first of which is present on GitLab, 
-the access to this repository require access to be granted by the owner Davide Costanzi
-myo_testing_tools repo: https://gitlab.com/davide.costanzi/myo_tools_testing
-myo_interafce data: https://univr-my.sharepoint.com/:f:/g/personal/davide_costanzi_univr_it/EjxulHf-4XBNh5BEWGRDnK4B22zxYxDER_DAsW-j8O49UA?e=efy68k
-
+repository and  myo_interface log data, to get these components contact Davide Costanzi or professor Andrea Calanca
 To work the folder containig this repository must be placed into the myo_testing_tools folder,
-the add to path with subfolders both myo_interface and myo_testing_tools folders
+then add to path with subfolders both myo_interface and myo_testing_tools folders
+
+Contacts:
+Davide Costanzi: davide.costanzi@univr.it
+Andrea Calanca: andrea.calanca@univr.it
