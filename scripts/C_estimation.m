@@ -125,7 +125,7 @@ selected_indeces = find(selection)';
 architecture = ArchitectureEnum.FORCE_INT_MULTICH8;
 trimStartIndex = 1;
 
-%% IMPORTANT PARAMETERS
+%% DATA FILTERING
 
 Ts = 0.01;
 
@@ -133,8 +133,8 @@ torqueEndEpsilon = 0.2;
 
 maxSignalLength = 400;
 
-C_plot_signals = true;
-W_plot_signals = true;
+C_plot_signals = false;
+W_plot_signals = false;
 
 % Outliers data filtering based on standard deviation
 % Remove outliers of a vector where an outlier is defined as a point more 
@@ -145,7 +145,7 @@ stdOutlierRemoval = true;
 trimAtStart = true;
 
 clc
-close all
+% close all
 
 allTrimmedPosErr = [];
 allTrimmedTorque = [];
@@ -342,7 +342,7 @@ clear torque position referencePosVal lastValOfPos lastValOfTorque
 % size(allTrimmedPos,1)
 % architecture
 %  close all
-%% Model Estimation
+%% CREATING IIDATA AND MODEL ESTIMATION
 
 clc;
 
@@ -430,7 +430,7 @@ W_bestModelOutput = {};
 
 clear expIdx C_est_iddata W_est_iddata opt;
 
-%% Find the best G testing on all experiments, O(n^2)
+%% FIND BEST MODEL, C AND W
 %
 %
 % CAREFULL, each bestModelFinder is O(n^2)
@@ -445,8 +445,17 @@ clc
 fprintf('\nC best model fit: %.3f\n', C_bestModelFit);
 
 fprintf('\nW best model fit: %.3f\n', W_bestModelFit);
+%
+%
+%% GET C AND W FROM RESULT STRUCTURES
+%
+%
+% clc
+% C_bestModel = C_resultTable{architecture,5}{1};
+% W_bestModel = W_resultTable{architecture,5}{1};
+% 
 
-%% Assumed mechanical model
+%% SIMULINK PARAMS AND MECHANICAL MODEL
 s = tf('s');
 J = 0.068;
 D = 0.085; %da 0.1 a 0.001
@@ -475,14 +484,14 @@ D_adm = 0.25;
 % impedance ctrl parameters
 K_imp = 8;
 
-G_assumed = 1/(J*s^2 + D*s)
+G_assumed = 1/(J*s^2 + D*s);
 %%
 %
 %
 % Estimated controller from posErr and torque
 %
 %
-
+clc
 C_best =  zpk(C_bestModel);
 [C_best_num, C_best_den] = tfdata(C_best, 'v');
 
@@ -498,16 +507,16 @@ C_from_Wbest = zpk(getC_from_G_and_W(G_assumed, W_bestModel, architecture, beta_
 
 %
 %
-% Fourier transform estimation
+%% FOURIER TRANSFORM ESTIMATION 
 %
 %
-
+C_freq_num_zeros = 1;
+C_freq_num_poles = 1;
 C_from_Wbest_no_minreal = tf(getC_from_G_and_W_no_minreal(G_assumed, W_bestModel, architecture, beta_pos, beta_force, beta_force_int, beta_adm, beta_imp, Kp_pos, Kd_pos, posPole, J_adm, D_adm, K_imp));
 
 N = 10;
 t = 0:Ts:N-1;
 
-%%
 f0=1;
 f1=10;
 
@@ -523,17 +532,18 @@ sweep = exp(-t).*sin(pi*(f0*t + ((f1 - f0)*t.^2)/2*Ts));
 F_iddata = fft(iddata(y, sweep', Ts));
 % figure 
 % plot(F_iddata)
-C_freq_est = tfest(F_iddata, 1, 1);
+C_freq_est = tfest(F_iddata, C_freq_num_zeros, C_freq_num_poles);
 [C_freq_num, C_freq_den] = tfdata(zpk(C_freq_est), 'v');
 
-%%
+%% RESULT SAVING
+
 C_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, size(allTrimmedTorque,1), {C_best}, C_bestModelFit, {C_best_num}, {C_best_den}, {pole(C_best)}};
 
 W_resultTable(architecture, :) = {char(architecture), W_num_zeros, W_num_poles, size(allTrimmedTorque,1), {zpk(W_bestModel)}, W_bestModelFit, {C_from_Wbest}, {C_from_Wbest_num}, {C_from_Wbest_den}, {pole(C_from_Wbest)}};
 
-C_freq_resultTable(architecture, :) = {char(architecture), C_num_zeros, C_num_poles, {zpk(C_freq_est)}, {C_freq_num}, {C_freq_den}, {zero(C_freq_est)}, {pole(C_freq_est)}};
-
-% Testing signals plots
+C_freq_resultTable(architecture, :) = {char(architecture), C_freq_num_zeros, C_freq_num_poles, {zpk(C_freq_est)}, {C_freq_num}, {C_freq_den}, {zero(C_freq_est)}, {pole(C_freq_est)}};
+%%
+% Validation plots
 close all
 imageSavePath = pathToGitFolder + "images\\";
 saveImage = true;
@@ -543,24 +553,17 @@ betaPath = "allBetas\\";
 CW_plotFunction(plotC, plotW, allTrimmedTorque, allTrimmedPos, C_bestModelOutput, W_bestModelOutput, saveImage, imageSavePath, architecture, betaPath )
 close all
 
-%% Simulink responses
+%% Simulink responses plot
 clc
 close all
 sim_imageSavePath = pathToGitFolder + "images\\simulink_responses\\";
-sim_saveImage = false;   
+sim_saveImage = true;   
 sim_betaPath = "allBetas\\";
+stepAmp = allTrimmedPosRef(1,1)-allTrimmedPos(1,1);
 
-% Ts = 0.01;
-% DimValues = 1;
-% 
-% DataPositions = W_iddata{1}.InputData;
-% TimeValues=0 : Ts : Ts*(length(DataPositions)-1);
-% 
-% step_exp.time=TimeValues';
-% step_exp.signals.values = DataPositions;
-% step_exp.signals.dimensions = DimValues;
-% sim('myo_model_architectures');
+out = sim('myo_model_architectures');
 
-simulink_plot_function(sim_saveImage, sim_imageSavePath, architecture, sim_betaPath, out)
+simulink_plot_function(sim_saveImage, sim_imageSavePath, architecture, sim_betaPath, out, allTrimmedPosRef, allTrimmedPos)
+
 
 
