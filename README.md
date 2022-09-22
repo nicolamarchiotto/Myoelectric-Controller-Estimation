@@ -1,4 +1,7 @@
 # RPC Project
+
+Master Degree in Computer Engineering for Robotics and Smart Industry - University of Verona - A.Y. 2021/2022
+
 This repo contains the code for the controller estimation of a study regarding 
 Myoelectric Control Architectures to Drive Upper Limb Exoskeletons.
 
